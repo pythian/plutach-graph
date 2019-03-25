@@ -3,6 +3,8 @@ package plutarch.client.graph
 import plutarch.client.graph.Geometry._
 import plutarch.shared.data.MetricDomain
 import plutarch.client.experemental.DateTools._
+import slogging.LazyLogging
+
 import scala.concurrent.duration._
 import scala.collection.immutable.{ TreeMap, TreeSet }
 import scalajs.js.Date
@@ -11,7 +13,7 @@ object Grid {
   def apply(graphControlState: GraphControlState)(ctx: Context): Grid = new Grid(graphControlState)(ctx)
 }
 
-class Grid(graphControlState: GraphControlState)(implicit ctx: Context) {
+class Grid(graphControlState: GraphControlState)(implicit ctx: Context) extends LazyLogging {
   val minLeftTick: Int = 200
 
   def draw(): Unit = {

@@ -1,7 +1,9 @@
 package plutarch.server.pipelines
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import scala.language.postfixOps
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, Cancellable }
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.server.data.metricManager.MetricManager
 import plutarch.server.data.metrics.Metric
@@ -11,6 +13,7 @@ import plutarch.shared.data.metrics.Conf
 import plutarch.server.data.experemental.Tools.timing
 
 import scala.concurrent.duration._
+import scala.util.{ Failure, Success, Try }
 
 class DummyPipeline(
     webSocketFlowCoordinator: WebSocketFlowCoordinator,
@@ -53,12 +56,23 @@ class DummyPipeline(
   }
 
   def start(): Unit = {
+    val errCount = new AtomicInteger(0);
     val start: Long = System.currentTimeMillis()
-    system.scheduler.schedule(0 second, conf.step / 5 millis) {
+    lazy val schedule: Cancellable = system.scheduler.schedule(0 second, conf.step / 5 millis) {
       val curr = System.currentTimeMillis()
       val data = genData(curr)
-      publish(curr, data)
+      Try(publish(curr, data)) match {
+        case Success(_) ⇒
+        case Failure(ex) ⇒
+          logger.error("Getting error while publishing", ex)
+          val errors = errCount.addAndGet(1)
+          if (errors > 5) {
+            logger.error("Too many errors, canceling pipeline")
+            schedule.cancel()
+          }
+      }
     }
+    schedule
   }
 
   init()

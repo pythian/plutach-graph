@@ -5,8 +5,8 @@ organizationName := "Plutarch"
 version := "0.1"
 
 lazy val scalaV = "2.12.4"
-lazy val akkaV = "2.5.8"
-lazy val akkaHttpV = "10.0.11"
+lazy val akkaV = "2.5.21"
+lazy val akkaHttpV = "10.1.8"
 
 lazy val boopickleV = "1.3.0"
 lazy val upickleV = "0.4.4"
@@ -46,6 +46,7 @@ lazy val backend =
         "com.typesafe.akka" %% "akka-stream" % akkaV,
         "com.typesafe.akka" %% "akka-http" % akkaHttpV,
         "com.typesafe.akka" %% "akka-slf4j" % akkaV,
+        "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpV,
 
         "org.webjars" % "webjars-locator" % "0.36",
         "org.webjars.npm" % "w3-css" % w3cssV,

@@ -424,8 +424,12 @@ object Geometry {
 
       private def nextIncarnation(): Unit = state.incarnation += 1
 
-      def setCoordinates(coordinates: Coordinates): Unit = state.coordinates = coordinates
-      def setGridCoordinates(coordinates: Coordinates): Unit = state.gridCoordinates = coordinates
+      def setCoordinates(coordinates: Coordinates): Unit = {
+        state.coordinates = coordinates
+      }
+      def setGridCoordinates(coordinates: Coordinates): Unit = {
+        state.gridCoordinates = coordinates
+      }
       def setCanvSize(width: Int, height: Int): Unit = {
         c.set(width, height)
         state.canvSize = c.size
@@ -449,7 +453,7 @@ object Geometry {
         state.current = current
         state.step = step
         state.adjCurrent = (state.current / step).floor * step
-        if (delta != 0) {
+        if (state.coordinates == CoordinatesUniverseRealTime && delta != 0) {
           def transform(v: V): V = v + V(delta, 0)
           checkDomain(transform(state.gmin), transform(state.gmax))
         }

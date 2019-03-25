@@ -6,14 +6,17 @@ import akka.http.scaladsl.model.ws.{ Message, TextMessage }
 import akka.http.scaladsl.server.{ Directives, RejectionHandler, Route }
 import akka.stream.scaladsl.Flow
 import org.webjars.WebJarAssetLocator
+import plutarch.server.data.metricManager.MetricManager
+import plutarch.server.data.metrics.MetricMessage
 import plutarch.server.pages.Pages
-
-import scala.util.Failure
 import plutarch.server.ws.WebSocketFlowCoordinator
+import plutarch.server.data.metrics.MetricMessageJsonSupport._
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Try, Failure, Success }
 
-import scala.concurrent.ExecutionContext
-
-class Service(webSocketFlowCoordinator: WebSocketFlowCoordinator)(implicit executor: ExecutionContext) extends Directives with LazyLogging {
+class Service(
+    webSocketFlowCoordinator: WebSocketFlowCoordinator,
+    metricManager:            MetricManager)(implicit executor: ExecutionContext) extends Directives with LazyLogging {
 
   private val locator = new WebJarAssetLocator
 
@@ -32,6 +35,21 @@ class Service(webSocketFlowCoordinator: WebSocketFlowCoordinator)(implicit execu
         path("robots.txt")(forbiddenHandler) ~
         path("websocket") {
           parameters('req.?) { req ⇒ handleWebSocketMessages(websocketFlow(req)) }
+        } ~
+        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "Ping", "t": 1553525801000, "values": [["obj", 1]]}' http://127.0.0.1:8080/metrics
+        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525801000, "values": [["Z", 10]]}' http://127.0.0.1:8080/metrics
+        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525802000, "values": [["Z", 30]]}' http://127.0.0.1:8080/metrics
+        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525803000, "values": [["Z", 0]]}' http://127.0.0.1:8080/metrics
+        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525804000, "values": [["Z", 15]]}' http://127.0.0.1:8080/metrics
+        (path("metrics") & post) {
+          entity(as[MetricMessage]) { message ⇒
+            onComplete(publish(message)) {
+              case Success(_) ⇒ complete("Ok")
+              case Failure(ex) ⇒
+                logger.warn("Metric publishing failed", ex)
+                complete((StatusCodes.InternalServerError, s"An error occurred: ${ex.getMessage}"))
+            }
+          }
         }
     }
 
@@ -85,5 +103,18 @@ class Service(webSocketFlowCoordinator: WebSocketFlowCoordinator)(implicit execu
         case _ ⇒
           logger.info(s"WS stream completed")
       })
+
+  def publish(metricMessage: MetricMessage): Future[Unit] = {
+    metricManager.getMetric(metricMessage.metricName) match {
+      case Some(metric) ⇒
+        Try(metric.add(metricMessage.t, metricMessage.values)) match {
+          case Success(f) ⇒
+            webSocketFlowCoordinator.inform(metricMessage.metricName)
+            f
+          case Failure(ex) ⇒ Future.failed(ex)
+        }
+      case None ⇒ Future.failed(new RuntimeException(s"Metric ${metricMessage.metricName} is not found."))
+    }
+  }
 
 }
