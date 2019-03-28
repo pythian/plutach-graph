@@ -33,6 +33,8 @@ object Scale extends LazyLogging {
 
   class Impl(val name: String, val scale: Int, val step: Long, val accCreator: CombinedAccumulatorCreator, val storeCreator: AggregationStoreCreator, withTotal: Boolean) extends Scale {
 
+    override def toString: String = s"Scale($name, $scale, $step)"
+
     private case class Current(key: Long) extends CurrentR {
       private val data = MHashMap.empty[Int, CombinedAccumulator]
       private var version = 0L
@@ -64,6 +66,7 @@ object Scale extends LazyLogging {
     val aggregationsStore: AggregationsStore = AggregationsStore.create(thisStep, accCreator.getAggregations, storeCreator)
 
     def add(t: Long, values: Seq[(Int, Double)])(implicit executor: ExecutionContext): Future[Unit] = {
+      logger.debug(s"${this.toString} received t=$t, curr.key=${curr.key}")
       val thisKey = keyRoundToStep(t)
       if (thisKey == curr.key) {
         // this point, add to acc

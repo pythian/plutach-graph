@@ -36,15 +36,12 @@ class Service(
         path("websocket") {
           parameters('req.?) { req ⇒ handleWebSocketMessages(websocketFlow(req)) }
         } ~
-        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "Ping", "t": 1553525801000, "values": [["obj", 1]]}' http://127.0.0.1:8080/metrics
-        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525801000, "values": [["Z", 10]]}' http://127.0.0.1:8080/metrics
-        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525802000, "values": [["Z", 30]]}' http://127.0.0.1:8080/metrics
-        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525803000, "values": [["Z", 0]]}' http://127.0.0.1:8080/metrics
-        // curl -i -X POST -H 'Content-Type: application/json' -d '{"metricName": "External", "t": 1553525804000, "values": [["Z", 15]]}' http://127.0.0.1:8080/metrics
         (path("metrics") & post) {
           entity(as[MetricMessage]) { message ⇒
+            logger.info(s"Received message, message=$message")
             onComplete(publish(message)) {
-              case Success(_) ⇒ complete("Ok")
+              case Success(_) ⇒
+                complete("Ok")
               case Failure(ex) ⇒
                 logger.warn("Metric publishing failed", ex)
                 complete((StatusCodes.InternalServerError, s"An error occurred: ${ex.getMessage}"))
@@ -109,12 +106,14 @@ class Service(
       case Some(metric) ⇒
         val t = metricMessage.t.getOrElse(System.currentTimeMillis())
         Try(metric.add(t, metricMessage.values)) match {
-          case Success(f) ⇒
+          case Success(future) ⇒
             webSocketFlowCoordinator.inform(metricMessage.metricName)
-            f
-          case Failure(ex) ⇒ Future.failed(ex)
+            future
+          case Failure(ex) ⇒
+            Future.failed(ex)
         }
-      case None ⇒ Future.failed(new RuntimeException(s"Metric ${metricMessage.metricName} is not found."))
+      case None ⇒
+        Future.failed(new RuntimeException(s"Metric ${metricMessage.metricName} is not found."))
     }
   }
 

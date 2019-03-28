@@ -38,6 +38,7 @@ object Metric {
 
     val rawStore: Raw = storeCreator.createRawStore()
     val scalesStore: Map[Int, Scale] = scales.map(scale ⇒ scale -> Scale.create(name, scale, step, accCreator, storeCreator, withTotal)).toMap
+    val scalesStoreList: List[Scale] = scalesStore.values.toList
     val objectsStore: Objects = storeCreator.createObjectsStore()
 
     def name: String = conf.name
@@ -55,7 +56,7 @@ object Metric {
           val obj = objectsStore.check(t, objectName)
           (obj.id, value)
       }
-      val futures = scalesStore.map(_._2.add(t, valuesIds))
+      val futures = scalesStoreList.map(ss => ss.add(t, valuesIds))
       Future.sequence(futures).map(_ ⇒ ())
     }
     private def join(requestId: Int, aggregation: Aggregation, fobjs: Future[ByteBuffer], fdata: Future[ByteBuffer])(implicit executor: ExecutionContext): Future[ByteBuffer] = {
