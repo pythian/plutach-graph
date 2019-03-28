@@ -107,7 +107,8 @@ class Service(
   def publish(metricMessage: MetricMessage): Future[Unit] = {
     metricManager.getMetric(metricMessage.metricName) match {
       case Some(metric) ⇒
-        Try(metric.add(metricMessage.t, metricMessage.values)) match {
+        val t = metricMessage.t.getOrElse(System.currentTimeMillis())
+        Try(metric.add(t, metricMessage.values)) match {
           case Success(f) ⇒
             webSocketFlowCoordinator.inform(metricMessage.metricName)
             f
