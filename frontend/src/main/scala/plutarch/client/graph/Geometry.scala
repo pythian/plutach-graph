@@ -450,12 +450,17 @@ object Geometry {
       }
       private def setStepCurrent(step: Double, current: Double): Unit = {
         val delta = current - state.current
-        state.current = current
-        state.step = step
-        state.adjCurrent = (state.current / step).floor * step
-        if (state.coordinates == CoordinatesUniverseRealTime && delta != 0) {
-          def transform(v: V): V = v + V(delta, 0)
-          checkDomain(transform(state.gmin), transform(state.gmax))
+        if (delta > 0) {
+          state.current = current
+          state.step = step
+          state.adjCurrent = (state.current / step).floor * step
+          if (state.coordinates == CoordinatesUniverseRealTime && delta != 0) {
+            def transform(v: V): V = v + V(delta, 0)
+
+            checkDomain(transform(state.gmin), transform(state.gmax))
+          }
+        } else {
+          // ignoring set current to the past!
         }
       }
       def rescale(pos: H1, wheel: Double): Unit = {
