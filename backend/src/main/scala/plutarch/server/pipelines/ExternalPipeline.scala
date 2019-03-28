@@ -11,7 +11,7 @@ import plutarch.shared.data.Aggregations
 import plutarch.shared.data.metrics.Conf
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-import scala.concurrent.ExecutionContext.Implicits.global._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ExternalPipeline(
     webSocketFlowCoordinator: WebSocketFlowCoordinator,
