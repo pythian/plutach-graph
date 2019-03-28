@@ -66,15 +66,14 @@ object Scale extends LazyLogging {
     val aggregationsStore: AggregationsStore = AggregationsStore.create(thisStep, accCreator.getAggregations, storeCreator)
 
     def add(t: Long, values: Seq[(Int, Double)])(implicit executor: ExecutionContext): Future[Unit] = {
-      logger.debug(s"${this.toString} received t=$t, curr.key=${curr.key}")
       val thisKey = keyRoundToStep(t)
+      logger.debug(s"${this.toString} received t=$t, curr.key=${curr.key}, thisKey=$thisKey, thisKey-curr.key=${thisKey - curr.key}")
       if (thisKey == curr.key) {
         // this point, add to acc
         curr.add(t, values)
         Future.successful()
       } else if (thisKey > curr.key) {
         val future = if (curr.key > Long.MinValue) {
-          //memoryStore.add(curr.key, curr.get)
           aggregationsStore.add(curr)
         } else {
           Future.successful()
