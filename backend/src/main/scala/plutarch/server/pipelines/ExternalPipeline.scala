@@ -68,4 +68,5 @@ class ExternalPipeline(
     schedule
   }
 
+  start()
 }
