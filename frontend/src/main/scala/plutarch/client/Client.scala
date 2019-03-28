@@ -24,12 +24,13 @@ object Client extends LazyLogging {
     // initialize websocket with message handlers
     val ws: WS = WS.create()
     val container = div().render
+    val pl = div(h1("PLUTARCH")).render
     window.onload = _ ⇒ {
-      document.body.appendChild(div(h1("PLUTARCH")).render)
+      document.body.appendChild(pl)
       document.body.appendChild(container)
     }
     ws.ready.foreach { _ ⇒
-      initialization(ws, container)
+      initialization(ws, container, pl)
       //initialization0(ws, container)
     }
   }
@@ -48,12 +49,23 @@ object Client extends LazyLogging {
 
   }
 
-  def initialization(ws: WS, container: Div): Unit = {
+  def initialization(ws: WS, container: Div, pl: Div): Unit = {
 
     val dataSource = DataSource.create(ws)
     val cacheData = CacheData.create(dataSource)
     val dummyGraphControl = graph.DummyGraphControl.create(cacheData)
     container.appendChild(dummyGraphControl.root)
+
+    pl.onclick = (e: MouseEvent) ⇒ {
+      val m = cacheData.state.metrics.toIndexedSeq.zipWithIndex
+      val sz = m.length
+      dummyGraphControl.getMetric.foreach { name ⇒
+        m.find(_._1._1 == name).foreach { e ⇒
+          val idx = (e._2 + 1) % sz
+          dummyGraphControl.setMetricAndAggregation(m(idx)._1._2.getMetricConf)
+        }
+      }
+    }
 
     cacheData.setOnReceive(dummyGraphControl.update)
     cacheData.setOnCurrentsReceive { req ⇒

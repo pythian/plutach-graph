@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.shared.collection.ByteRangeMap
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object ByteBufferAggregationStore {
   def rangeMapBufferSize(step: Long): Int = (64L * 1024L * 1024L * 1024L / step).toInt
@@ -24,7 +24,7 @@ class ByteBufferAggregationStore(step: Long) extends AggregationStore with LazyL
   private val byteBuffer = ByteBuffer.allocateDirect(storeBufferSize(step))
 
   def add(key: Long, value: ByteBuffer): Future[Unit] = {
-     logger.debug(s"ByteBufferAggregationStore($step) recived key=$key, state.currKey=${state.currKey}")
+    //logger.debug(s"ByteBufferAggregationStore($step) recived key=$key, state.currKey=${state.currKey}")
 
     val newCurrentOffset = state.currOffset + value.limit()
     if (state.currKey == Long.MinValue || key == state.currKey + step) {

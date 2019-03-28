@@ -69,7 +69,7 @@ object Metric {
           val obj = objectsStore.check(t, objectName)
           (obj.id, value)
       }
-      val futures = scalesStoreList.map(ss => ss.add(t, valuesIds))
+      val futures = scalesStoreList.map(ss ⇒ ss.add(t, valuesIds))
       Future.sequence(futures).map(_ ⇒ ())
     }
     private def join(requestId: Int, aggregation: Aggregation, fobjs: Future[ByteBuffer], fdata: Future[ByteBuffer])(implicit executor: ExecutionContext): Future[ByteBuffer] = {

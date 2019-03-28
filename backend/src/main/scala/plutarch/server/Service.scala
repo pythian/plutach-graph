@@ -107,13 +107,13 @@ class Service(
         val t = metricMessage.t.getOrElse(System.currentTimeMillis())
         metric.push(t, metricMessage.values)
         Future.successful()
-//        Try(metric.add(t, metricMessage.values)) match {
-//          case Success(future) ⇒
-//            webSocketFlowCoordinator.inform(metricMessage.metricName)
-//            future
-//          case Failure(ex) ⇒
-//            Future.failed(ex)
-//        }
+      //        Try(metric.add(t, metricMessage.values)) match {
+      //          case Success(future) ⇒
+      //            webSocketFlowCoordinator.inform(metricMessage.metricName)
+      //            future
+      //          case Failure(ex) ⇒
+      //            Future.failed(ex)
+      //        }
       case None ⇒
         Future.failed(new RuntimeException(s"Metric ${metricMessage.metricName} is not found."))
     }

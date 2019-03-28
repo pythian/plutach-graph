@@ -67,6 +67,9 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
     selecting.initAggs()
   }
 
+  def isMetricSet: Boolean = state.metric.isDefined
+  def getMetric: Option[String] = state.metric.map(_.name)
+
   def setAggregation(aggregation: Aggregation, transform: GraphState ⇒ Double ⇒ Double): Unit = {
     graph.resetState()
     controlUnset()
@@ -75,6 +78,11 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
     state.transform = transform
     controlSet()
     drawThrottle.immediate()
+  }
+
+  def setMetricAndAggregation(metric: Conf): Unit = {
+    setMetric(metric)
+    setAggregation(metric.aggregations.head)
   }
 
   def setAggregation(aggregation: Aggregation): Unit = {
