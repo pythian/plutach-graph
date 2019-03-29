@@ -38,13 +38,11 @@ object Handlers extends LazyLogging {
           ws.send(write(Protocol.WSSubscribe(accepted.metrics))) // subscribe everything!
         case alive: Protocol.WSKeepAlive ⇒ // ok
         case mconfs: Protocol.WSMetricsConfs ⇒
-          // show first
-          val meta = mconfs.confs.values.head
-          if (!cacheData.isRegistered(meta)) {
+          for (meta ← mconfs.confs.values if !cacheData.isRegistered(meta)) {
             cacheData.registerMetric(meta)
-            graphControl.setMetric(meta.conf)
-            val agg = meta.conf.aggregations.head
-            graphControl.setAggregation(agg)
+          }
+          if (!graphControl.isMetricSet) {
+            graphControl.setMetricAndAggregation(mconfs.confs.values.head.conf)
           }
         case data: Protocol.WSData     ⇒ // ok
         case curr: Protocol.WSCurrents ⇒ cacheData.receive(curr)

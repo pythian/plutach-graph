@@ -17,7 +17,10 @@
 package plutarch.server.data.scale
 
 import java.nio.ByteBuffer
+
+import com.typesafe.scalalogging.LazyLogging
 import plutarch.shared.collection.ByteRangeMap
+
 import scala.concurrent.{ ExecutionContext, Future }
 
 object ByteBufferAggregationStore {
@@ -27,7 +30,7 @@ object ByteBufferAggregationStore {
   def create(step: Long): ByteBufferAggregationStore = new ByteBufferAggregationStore(step)
 }
 
-class ByteBufferAggregationStore(step: Long) extends AggregationStore {
+class ByteBufferAggregationStore(step: Long) extends AggregationStore with LazyLogging {
   import ByteBufferAggregationStore._
 
   private case class State(firstKey: Long = Long.MaxValue, currKey: Long = Long.MinValue, currOffset: Int = 0)
@@ -37,6 +40,8 @@ class ByteBufferAggregationStore(step: Long) extends AggregationStore {
   private val byteBuffer = ByteBuffer.allocateDirect(storeBufferSize(step))
 
   def add(key: Long, value: ByteBuffer): Future[Unit] = {
+    //logger.debug(s"ByteBufferAggregationStore($step) recived key=$key, state.currKey=${state.currKey}")
+
     val newCurrentOffset = state.currOffset + value.limit()
     if (state.currKey == Long.MinValue || key == state.currKey + step) {
       offsets.add(key, state.currOffset)
@@ -46,7 +51,7 @@ class ByteBufferAggregationStore(step: Long) extends AggregationStore {
         offsets.add(key, state.currOffset)
       }
     } else {
-      throw new Exception("Late data keys are not supported")
+      throw new Exception(s"Late data keys are not supported, key=$key, state.currKey=${state.currKey}")
     }
     byteBuffer.put(value)
     val newFirstKey = if (state.firstKey == Long.MaxValue) key else state.firstKey

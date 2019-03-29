@@ -72,7 +72,7 @@ class DummyPipeline(
   }
 
   def start(): Unit = {
-    val errCount = new AtomicInteger(0);
+    val errCount = new AtomicInteger(0)
     val start: Long = System.currentTimeMillis()
     lazy val schedule: Cancellable = system.scheduler.schedule(0 second, conf.step / 5 millis) {
       val curr = System.currentTimeMillis()

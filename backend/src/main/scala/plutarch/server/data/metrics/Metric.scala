@@ -40,6 +40,9 @@ trait Metric {
   def get(aggregation: Aggregation, requestId: Int, scale: Int, intervals: Seq[(Long, Long)])(implicit executor: ExecutionContext): Future[ByteBuffer]
   def getCurrent(aggregation: Aggregation)(scale: Int): ((Long, Long, Seq[(Int, Any)]), Seq[DataObject])
   def getCurrentKey: Long
+  // testing workaroung
+  def push(t: Long, values: Seq[(String, Double)]): Unit
+  def pop(): Seq[(Long, Seq[(String, Double)])]
 }
 
 // todo: possible bug: have to request objects wider than data to cover with step ?
@@ -50,10 +53,21 @@ object Metric {
   class Impl(val conf: Conf, storeCreator: MetricStoreCreator) extends Metric {
     import conf._
 
+    @volatile private var data = List.empty[(Long, Seq[(String, Double)])]
+    def push(t: Long, values: Seq[(String, Double)]): Unit = this.synchronized {
+      data = (t, values) :: data
+    }
+    def pop(): Seq[(Long, Seq[(String, Double)])] = this.synchronized {
+      val res = data
+      data = List.empty
+      res
+    }
+
     private val accCreator = CombinedAccumulator.getInstanceCreator(aggregations)
 
     val rawStore: Raw = storeCreator.createRawStore()
     val scalesStore: Map[Int, Scale] = scales.map(scale ⇒ scale -> Scale.create(name, scale, step, accCreator, storeCreator, withTotal)).toMap
+    val scalesStoreList: List[Scale] = scalesStore.values.toList
     val objectsStore: Objects = storeCreator.createObjectsStore()
 
     def name: String = conf.name
@@ -71,7 +85,7 @@ object Metric {
           val obj = objectsStore.check(t, objectName)
           (obj.id, value)
       }
-      val futures = scalesStore.map(_._2.add(t, valuesIds))
+      val futures = scalesStoreList.map(ss ⇒ ss.add(t, valuesIds))
       Future.sequence(futures).map(_ ⇒ ())
     }
     private def join(requestId: Int, aggregation: Aggregation, fobjs: Future[ByteBuffer], fdata: Future[ByteBuffer])(implicit executor: ExecutionContext): Future[ByteBuffer] = {
