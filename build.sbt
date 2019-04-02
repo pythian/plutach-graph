@@ -64,7 +64,11 @@ lazy val backend =
         "com.typesafe.akka" %% "akka-testkit" % akkaV,
         "org.scalactic" %% "scalactic" % "3.0.3",
         "org.scalatest" %% "scalatest" % "3.0.3" % "test",
-        "commons-io" % "commons-io" % "2.6" % "test"
+        "commons-io" % "commons-io" % "2.6" % "test",
+
+        // misc
+        "org.twitter4j" % "twitter4j-stream" % "4.0.7",
+        "org.json4s" %% "json4s-jackson" % "3.6.5",
       ),
       resourceGenerators in Compile += Def.task {
         val f1 = (jsOpts in Compile in frontend).value.data

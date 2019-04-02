@@ -63,8 +63,10 @@ object AppServer extends LazyLogging {
     val metricManager = MetricManager.create(DefaultMetricStoreCreatorCreator)
     val webSocketFlowCoordinator = WebSocketFlowCoordinator.create(metricManager)
 
-    val externalPipeline = new ExternalPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    //val externalPipeline = new ExternalPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
     val dummyPipeline = new DummyPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    val twitterPipeline = new TwitterPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+
     //val currencyPipeline = new CurrencyPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
 
     val service = new Service(webSocketFlowCoordinator, metricManager)
