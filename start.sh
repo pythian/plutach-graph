@@ -1,0 +1,1 @@
+java -Dconfig.file=application.conf -Xmx16G -Xms16G -XX:+UseG1GC -cp "lib/backend.jar" plutarch.Main

@@ -19,7 +19,9 @@ package plutarch.client.graph
 import org.scalajs.dom.svg.SVG
 import plutarch.client.experemental.Tools.{ InnerText, innerText }
 import plutarch.client.experemental.{ DateTools, Signal, SignalSource, Tools }
+import plutarch.shared.Protocol
 import plutarch.shared.data.{ Aggregations, Charts }
+import rx._
 
 import scala.concurrent.duration._
 
@@ -34,8 +36,8 @@ object Selecting {
     svgLayer:     SVG,
     drawThrottle: Tools.Throttle,
     onSort:       () ⇒ Unit,
-    conf:         SelectingConf)(thatCtx: Geometry.Context): Selecting =
-    new Selecting(graphControl, canv, svgLayer, drawThrottle, onSort, conf)(thatCtx)
+    conf:         SelectingConf)(thatCtx: Geometry.Context)(implicit ctx: Ctx.Owner): Selecting =
+    new Selecting(graphControl, canv, svgLayer, drawThrottle, onSort, conf)(thatCtx, ctx)
 
   private class SelectingState() {
     var interval: (Option[Double], Option[Double], Boolean) = (None, None, false)
@@ -70,7 +72,7 @@ object Selecting {
     val sort: InnerText = innerText("""\uf0dc""")
   }
 
-  val jumpIntervals = Seq(
+  val jumpIntervals: Seq[(Int, String, Long ⇒ Long)] = Seq(
     (0, "1m", (t: Long) ⇒ t - 1.minute.toMillis),
     (1, "10m", (t: Long) ⇒ t - 10.minute.toMillis),
     (2, "1h", (t: Long) ⇒ t - 1.hour.toMillis),
@@ -95,12 +97,14 @@ class Selecting(
     svgLayer:     SVG,
     drawThrottle: Tools.Throttle,
     onSort:       () ⇒ Unit,
-    conf:         SelectingConf)(implicit thatCtx: Geometry.Context) {
+    conf:         SelectingConf)(implicit thatCtx: Geometry.Context, ctx: Ctx.Owner) {
 
   private val selectingState = new Selecting.SelectingState()
 
   def state: Int = selectingState.state
   def isSelected: Boolean = selectingState.selected
+
+  val rxInterval: Var[Option[(Double, Double)]] = Var(None)
 
   def getSelected: (Option[Double], Option[Double], Boolean) = selectingState.interval
 
@@ -109,8 +113,10 @@ class Selecting(
     val x2 = selectingState.current.asUniverse.x
     val (left, right) = if (x1 <= x2) (x1, x2) else (x2, x1)
     selectingState.interval = (Some(left), Some(right), selectingState.ratioToMax > 1)
+    rxInterval() = Some((left, right))
   } else {
     selectingState.interval = (None, None, false)
+    rxInterval() = None
   }
 
   def start(pos: Geometry.H1): Unit = {
@@ -358,7 +364,7 @@ class Selecting(
     val jumpsTopX: SignalSource[Map[Int, Double]] = Signal.source[Map[Int, Double]]()
     val topY: SignalSource[Double] = Signal.source[Double]()
     val realX: SignalSource[Double] = Signal.source[Double]()
-    val realOrHist: SignalSource[Boolean] = Signal.source[Boolean](true)
+    val realOrHist: SignalSource[Boolean] = Signal.source[Boolean](false)
 
     val gridX: SignalSource[Double] = Signal.source[Double]()
     val gridCoord: SignalSource[Boolean] = Signal.source[Boolean](false)
@@ -367,7 +373,7 @@ class Selecting(
     val chartFlag: SignalSource[Int] = Signal.source[Int](2)
 
     val zeroX: SignalSource[Double] = Signal.source[Double]()
-    val zeroFlag: SignalSource[Boolean] = Signal.source[Boolean](false)
+    val zeroFlag: SignalSource[Boolean] = Signal.source[Boolean](true)
 
     val aggsTopX: SignalSource[Map[Int, Double]] = Signal.source[Map[Int, Double]]()
     val aggsTopY: SignalSource[Double] = Signal.source[Double]()
@@ -739,5 +745,23 @@ class Selecting(
   }
 
   initSvg()
+
+  def refresh(data: Long): Unit = {
+    selectingState.interval match {
+      case (Some(x1), Some(x2), _) if x1 <= data && data < x2 ⇒ refresh()
+      case _ ⇒
+    }
+  }
+
+  def refresh(req: Protocol.WSHistRequest): Unit = {
+    selectingState.interval match {
+      case (Some(x1), Some(x2), _) if Protocol.Interval(x1, x2).isIntersected(req.intervals) ⇒ refresh()
+      case _ ⇒
+    }
+  }
+
+  def refresh(): Unit = {
+    rxInterval.recalc()
+  }
 
 }

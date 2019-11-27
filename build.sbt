@@ -16,7 +16,7 @@ lazy val scalacssV = "0.5.5"
 lazy val faV = "5.0.10"
 lazy val w3cssV = "4.1.0"
 
-lazy val fullOpt = false
+lazy val fullOpt = true
 
 lazy val root = project.in(file(".")).aggregate(frontend, backend)
 
@@ -115,6 +115,7 @@ lazy val frontend =
         "io.suzaku" %%% "boopickle" % boopickleV,
         "com.lihaoyi" %%% "scalatags" % scalatagsV,
         "com.lihaoyi" %%% "upickle" % upickleV,
+        "com.lihaoyi" %%% "scalarx" % "0.4.0",
         "org.scala-js" %%% "scalajs-dom" % "0.9.5",
         "biz.enef" %%% "slogging" % "0.6.1"
       )

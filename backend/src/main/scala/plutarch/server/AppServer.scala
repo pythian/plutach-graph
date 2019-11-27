@@ -63,14 +63,24 @@ object AppServer extends LazyLogging {
     val metricManager = MetricManager.create(DefaultMetricStoreCreatorCreator)
     val webSocketFlowCoordinator = WebSocketFlowCoordinator.create(metricManager)
 
-    //val externalPipeline = new ExternalPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
-    val dummyPipeline = new DummyPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
-    val twitterPipeline = new TwitterPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    val conf = actorSystem.settings.config
 
+    //val externalPipeline = new ExternalPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
     //val currencyPipeline = new CurrencyPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    if (conf.getBoolean("app.pipelines.DummyPipeline")) {
+      val dummyPipeline = new DummyPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    }
+    if (conf.getBoolean("app.pipelines.TwitterPipeline")) {
+      val twitterPipeline = new TwitterPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    }
+    if (conf.getBoolean("app.pipelines.AshPipeline")) {
+      val ashPipeline = new AshPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    }
+    if (conf.getBoolean("app.pipelines.SmallTestPipeline")) {
+      val ashPipeline = new SmallTestPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
+    }
 
     val service = new Service(webSocketFlowCoordinator, metricManager)
-
     ServerConfig.TLS.connectionContext match {
       case Success(connectionContext) ⇒ bindAndHandle(service.routes, connectionContext, ServerConfig.TLS.port)
       case Failure(exception)         ⇒ logger.warn("Could not create TLS connection context", exception)

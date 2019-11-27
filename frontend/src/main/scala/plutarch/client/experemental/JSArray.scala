@@ -22,6 +22,7 @@ import js.annotation._
 @js.native
 @JSGlobal("Array")
 class JSArray[A] extends js.Object {
+  jsArray ⇒
   def length: Int = js.native
   @JSBracketAccess
   def apply(index: Int): A = js.native
@@ -36,4 +37,14 @@ class JSArray[A] extends js.Object {
 
 object JSArray {
   def empty[A]: JSArray[A] = new JSArray[A]
+  def toSeq[A](jsArray: JSArray[A]): Seq[A] = new Seq[A] {
+    override def length: Int = jsArray.length
+    override def apply(idx: Int): A = jsArray.apply(idx)
+    override def iterator: Iterator[A] = js.Iterator.IteratorOps(jsArray.jsIterator()).toIterator
+  }
+  def toSeqWithIndex[A](jsArray: JSArray[A]): Seq[(A, Int)] = new Seq[(A, Int)] {
+    override def length: Int = jsArray.length
+    override def apply(idx: Int): (A, Int) = (jsArray.apply(idx), idx)
+    override def iterator: Iterator[(A, Int)] = js.Iterator.IteratorOps(jsArray.jsIterator()).toIterator.zipWithIndex
+  }
 }

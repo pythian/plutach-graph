@@ -15,12 +15,13 @@
  */
 
 package plutarch.client.graph
+import rx._
 
 import Geometry._
 import org.scalajs.dom.MouseEvent
 
 object Cursor {
-  def apply(c: Canv) = new Cursor(c)
+  def apply(c: Canv)(implicit ctx: Ctx.Owner) = new Cursor(c)
 
   class State() {
     var onHold = false
@@ -28,9 +29,11 @@ object Cursor {
   }
 }
 
-class Cursor(c: Canv) {
+class Cursor(c: Canv)(implicit ctx: Ctx.Owner) {
   import Cursor._
   val state = new State()
+
+  val rxPos: Var[Option[V]] = Var(None)
 
   def getPos(implicit ctx: Context): Option[H1] = state.pos.map(Geometry.CP)
 
@@ -38,16 +41,19 @@ class Cursor(c: Canv) {
 
   def moveTo(pos: V): Unit = if (!state.onHold) {
     state.pos = Some(pos)
+    rxPos() = state.pos;
     c.clear()
     draw()
   }
 
   def moveAway(): Unit = if (!state.onHold) {
     state.pos = None
+    rxPos() = None
     c.clear()
   }
 
   def refresh(): Unit = {
+    rxPos.recalc()
     draw()
   }
 

@@ -22,3 +22,5 @@ project/plugins/project/
 *.iml
 out
 *.sc
+application.conf
+/data/*

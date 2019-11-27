@@ -24,8 +24,8 @@ import plutarch.shared.collection.ByteRangeMap
 import scala.concurrent.{ ExecutionContext, Future }
 
 object ByteBufferAggregationStore {
-  def rangeMapBufferSize(step: Long): Int = (64L * 1024L * 1024L * 1024L / step).toInt
-  def storeBufferSize(step: Long): Int = (256L * 1024L * 1024L * 1024L / step).toInt
+  def rangeMapBufferSize(step: Long): Int = (128L * 1024L * 1024L * 1024L / step).toInt
+  def storeBufferSize(step: Long): Int = (512L * 1024L * 1024L * 1024L / step).toInt
   val emptyByteBuffer: ByteBuffer = ByteBuffer.wrap(Array[Byte]())
   def create(step: Long): ByteBufferAggregationStore = new ByteBufferAggregationStore(step)
 }

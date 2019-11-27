@@ -19,6 +19,7 @@ package plutarch.client.graph
 import plutarch.client.data.{ Data, DataControl, DummyData }
 import plutarch.client.graph.Geometry.V
 import plutarch.shared.data.{ Aggregations, Charts }
+import rx.Ctx
 
 object DummyGraphControl {
 
@@ -41,8 +42,8 @@ object DummyGraphControl {
       val p0: V = V(50, 100)
       val p1: V = V(150, 70)
       val current: Double = System.currentTimeMillis()
-      val gmin: V = V(current - 600000, 0)
-      val gmax: V = V(current + 600000, 100)
+      val gmin: V = V(current - 3 * 24 * 60 * 60 * 1000L, 0) // 3 days ago
+      val gmax: V = V(current + 60 * 60 * 1000L, 100) // 1h future
     }
 
     val contextLimitsConf: Geometry.ContextLimitsConf = new Geometry.ContextLimitsConf {
@@ -59,7 +60,7 @@ object DummyGraphControl {
 
   }
 
-  def create(initData: Data): GraphControl = {
+  def create(initData: Data)(implicit ctx: Ctx.Owner): GraphControl = {
 
     val conf: DefaultGraphControlConf = new DefaultGraphControlConf {
       val data: Data = initData

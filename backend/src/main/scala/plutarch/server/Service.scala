@@ -101,7 +101,7 @@ class Service(
       .collect {
         case TextMessage.Strict(msg) ⇒ msg
         case other ⇒
-          logger.error("Unsupported message class: {}", other)
+          logger.error("Not supported message type: {}", other)
           throw new Exception("Not supported message type!")
       }
       .via(webSocketFlowCoordinator.createFlow(req))

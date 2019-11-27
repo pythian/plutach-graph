@@ -174,6 +174,19 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
     drawRegular()
   }
 
+  def interpolate(v: V): Option[DataView.Interpolation] = state.dataView.map { dataView ⇒
+    val hiddenObjects = graphControlState.hiddenObjects
+    val transform: Double ⇒ Double = graphControlState.transform(state)
+    val objectsOrder = graphControlState.order
+    dataView.interpolation(v.x, objectsOrder, hiddenObjects, transform)
+  }
+
+  def integral(x1: Double, x2: Double): Option[DataView.Integral] = state.dataView.map { dataView ⇒
+    val hiddenObjects = graphControlState.hiddenObjects
+    val transform: Double ⇒ Double = graphControlState.transform(state)
+    dataView.integral(x1, x2, hiddenObjects, transform)
+  }
+
   def drawRegular(): Unit = graphControlState.metricData match {
     case Some(metricData) ⇒
       graphControlState.aggregationData match {
@@ -409,11 +422,7 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
   def drawStackedAreaChart(stackedData: StackedData, metricData: MetricData, objectsOrder: Int ⇒ Int): Unit = {
     var noDataShown = true
     val (kx, ky, bx, by) = getCoefficients
-    val orderedObjects = JSArray.empty[Int]
-    stackedData.data.forEach { (_, k) ⇒
-      orderedObjects.push(k)
-    }
-    orderedObjects.sort((id1, id2) ⇒ objectsOrder(id2).compareTo(objectsOrder(id1))).forEach { objId ⇒
+    stackedData.objects.forEach { objId ⇒
       val points = stackedData.data.get(objId).asInstanceOf[DP]
       if (points.length > 0) {
         val obj = metricData.getObjectById(objId)

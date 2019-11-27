@@ -21,12 +21,14 @@ import org.scalajs.dom
 import org.scalajs.dom._
 import org.scalajs.dom.html.Div
 import org.scalajs.dom.svg.SVG
-import plutarch.client.data.{ AggregationData, Data, DataControl, MetricData }
+import plutarch.client.data.DataView.Integral
+import plutarch.client.data.{ AggregationData, Data, MetricData }
 import plutarch.client.experemental.Tools
 import plutarch.shared.Protocol
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.shared.data.Charts
 import plutarch.shared.data.metrics.Conf
+import rx.Ctx
 import scalatags.JsDom.all._
 import scalatags.JsDom.svgTags
 import slogging.LazyLogging
@@ -54,7 +56,7 @@ class GraphControlState(val conf: GraphControlConf) {
   var hiddenObjects: Set[Int] = Set.empty
 }
 
-abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
+abstract class GraphControl(conf: GraphControlConf)(implicit ctx: Ctx.Owner) extends LazyLogging {
   graphControl ⇒
 
   def draw(): Unit
@@ -84,6 +86,7 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
   }
 
   def isMetricSet: Boolean = state.metric.isDefined
+
   def getMetric: Option[String] = state.metric.map(_.name)
 
   def setAggregation(aggregation: Aggregation, transform: GraphState ⇒ Double ⇒ Double): Unit = {
@@ -103,6 +106,7 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
 
   def setAggregation(aggregation: Aggregation): Unit = {
     setAggregation(aggregation, _ ⇒ x ⇒ x)
+    selecting.refresh()
   }
 
   def setChart(chart: Charts.Chart): Unit = {
@@ -119,6 +123,8 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
   private val topSvgLayer: SVG = svgTags.svg().render
   private val topLayer = div(topSvgLayer, position.absolute, left := 0, top := 0, zIndex := 0).render
 
+  lazy val tables = new Tables(controlCursor, selecting, graph, conf, state)
+
   lazy val drawThrottle: Tools.Throttle = Tools.Throttle(conf.drawThrottle) {
     graphLayer.clear()
     selectLayer.clear()
@@ -129,15 +135,30 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
 
     grid.draw()
     selecting.draw()
-    controlCursor.refresh()
   }
 
-  private val onSort = () ⇒ {
-    state.order(1) match {
-      case 1  ⇒ state.order = x ⇒ -x
-      case -1 ⇒ state.order = x ⇒ x
+  private lazy val onSort: () ⇒ Unit = {
+    var tp = 0
+    def default(): Unit = state.order = x ⇒ x
+    () ⇒ {
+      tp = (tp + 1) % 3
+      if (tp == 0) {
+        default()
+      } else {
+        val sign = if (tp == 2) -1 else 1
+        selecting.rxInterval.now match {
+          case Some((x1, x2)) ⇒
+            graph.integral(x1, x2) match {
+              case Some(Integral(data)) ⇒
+                val map: Map[Int, Int] = data.map(r ⇒ r._1._1 -> r._2).toMap
+                state.order = x ⇒ sign * map.getOrElse(x, 1000000 * x)
+              case _ ⇒ default()
+            }
+          case _ ⇒ default()
+        }
+      }
+      drawThrottle.immediate()
     }
-    drawThrottle.immediate()
   }
 
   implicit val graphGeometry: Geometry.Context = new Geometry.Context(graphLayer)(conf.contextInitConf, conf.contextLimitsConf)
@@ -178,10 +199,12 @@ abstract class GraphControl(conf: GraphControlConf) extends LazyLogging {
   def setCurrent(current: Long): Unit = {
     graphGeometry.transform.setCurrent(current)
     if (graph.isNewCurrentInteresting) drawThrottle.asap()
+    selecting.refresh(current)
   }
 
   def update(req: Protocol.WSHistRequest): Unit = {
     if (graph.isInteresting(req)) drawThrottle.immediate()
+    selecting.refresh(req)
   }
 
   def setSize(width: Int, height: Int): Unit = {

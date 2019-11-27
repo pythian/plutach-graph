@@ -58,13 +58,13 @@ object DataView {
 
   case class Range(min: Double, max: Double)
   case class DataPoint(key: Double, value: Double)
-  case class StackedData(data: JSMap[Int, DP], range: Option[Range])
+  case class StackedData(objects: JSArray[Int], data: JSMap[Int, DP], range: Option[Range])
   case class LineDataPoint(key: Double, value: Double, isAppearing: Boolean, var isDisappearing: Boolean = false)
   case class LineData(data: JSMap[Int, LDP], range: Option[Range])
   case class SimpleDataPoint(key: Double, value: Double)
   case class SimpleData(data: JSMap[Int, SDP], range: Option[Range])
-  case class Interpolation()
-  case class Integral()
+  case class Interpolation(data: Seq[(Int, Double)])
+  case class Integral(data: Seq[((Int, Double), Int)])
 
   // test purposes
   def toLineData(stackedData: StackedData): LineData = {
@@ -93,9 +93,24 @@ trait DataView {
   def values: JSMap[Double, Map[Int, Double]]
   def info: Info
 
-  def interpolation: Interpolation = ???
   def total(transform: Double ⇒ Double): LineData = ???
-  def integral: Integral = ???
+
+  def integral(x0: Double, x1: Double, hiddenObjects: Set[Int], transform: Double ⇒ Double): Integral = {
+    val left = (x0 / step).floor * step
+    val right = (x1 / step).ceil * step
+    var key = left
+    val data: JSMap[Int, Double] = JSMap.empty[Int, Double]
+    while (key <= right) {
+      for ((id, value) ← values.get(key).getOrElse(Map.empty) if !hiddenObjects(id) && id > 0) {
+        data.set(id, data.get(id).getOrElse(0.0) + value)
+      }
+      key += step
+    }
+    val res = JSArray.empty[(Int, Double)]
+    data.forEach((v, k) ⇒ res.push((k -> v)))
+    res.sort((a, b) ⇒ -a._2.compareTo(b._2))
+    Integral(JSArray.toSeqWithIndex(res))
+  }
 
   private def getPrev(objIds: JSSet[Int], order: Int ⇒ Int, thisId: Int, objs: JSMap[Int, Double]): Double = {
     val thisOrder = order(thisId)
@@ -116,7 +131,7 @@ trait DataView {
 
   def stacked(order: Int ⇒ Int, hiddenObjects: Set[Int], transform: Double ⇒ Double): StackedData = {
     val rangeBuilder = new RangeBuilder()
-    val objects = JSMap.empty[Int, DP]
+    val data = JSMap.empty[Int, DP]
     var prevKey = Double.MinValue
     var prevObjs = JSSet.empty[Int]
     var prevObjsValues = JSMap.empty[Int, Double]
@@ -138,11 +153,13 @@ trait DataView {
         orderedObjs.sort((id1, id2) ⇒ order(id1).compareTo(order(id2))).forEach { objId ⇒
           currValue += transform(objs(objId))
           currObjValues.set(objId, currValue)
-          val arr = JSMap.getOrElseUpdate[Int, DP](objects, objId, JSArray.empty)
+          val arr = JSMap.getOrElseUpdate[Int, DP](data, objId, JSArray.empty)
           if (!prevObjs.has(objId) && prevKey != Double.MinValue) {
-            val value = getPrev(currObjs, order, objId, prevObjsValues)
+            val value = getPrev(prevObjs, order, objId, prevObjsValues)
             arr.push(DataPoint(prevKey, 0.0))
-            arr.push(DataPoint(prevKey, value))
+            if (value != 0.0) {
+              arr.push(DataPoint(prevKey, value))
+            }
           } else {
             prevObjs.delete(objId)
           }
@@ -151,7 +168,7 @@ trait DataView {
         rangeBuilder.add(currValue)
         prevObjs.forEach { objId ⇒
           val value = getPrev(currObjs, order, objId, currObjValues)
-          val arr = objects.get(objId).asInstanceOf[DP]
+          val arr = data.get(objId).asInstanceOf[DP]
           arr.push(DataPoint(key, value))
           arr.push(DataPoint(key, 0.0))
         }
@@ -159,7 +176,7 @@ trait DataView {
         prevObjsValues = currObjValues
       } else {
         prevObjs.forEach { objId ⇒
-          objects.get(objId).asInstanceOf[DP].push(DataPoint(key, 0.0))
+          data.get(objId).asInstanceOf[DP].push(DataPoint(key, 0.0))
         }
         prevObjs.clear()
         prevObjsValues.clear()
@@ -167,7 +184,10 @@ trait DataView {
       prevKey = key
       key += step
     }
-    StackedData(objects, rangeBuilder.result())
+    val objects = JSArray.empty[Int]
+    data.forEach((_, k) ⇒ objects.push(k))
+    objects.sort((id1, id2) ⇒ order(id2).compareTo(order(id1))) // order is correct! we draw in reversed order
+    StackedData(objects, data, rangeBuilder.result())
   }
 
   def line(hiddenObjects: Set[Int], transform: Double ⇒ Double): LineData = {
@@ -234,6 +254,34 @@ trait DataView {
       key += ds
     }
     SimpleData(objects, rangeBuilder.result())
+  }
+
+  var cnt = 0;
+
+  def interpolation(x: Double, order: Int ⇒ Int, hiddenObjects: Set[Int], transform: Double ⇒ Double): Interpolation = {
+    val left = (x / step).floor * step
+    val right = (x / step).ceil * step
+    val k = (right - x) / step
+
+    val leftValues: Map[Int, Double] = values.get(left).getOrElse(Map.empty)
+    val rightValues: Map[Int, Double] = values.get(right).getOrElse(Map.empty)
+    val atXValues = JSArray.empty[(Int, Double)]
+    leftValues.foreach {
+      case (id, leftValue) ⇒
+        if (id > 0 && !hiddenObjects(id)) {
+          val v = transform(leftValue) * k + transform(rightValues.getOrElse(id, 0.0)) * (1 - k)
+          atXValues.push((id, v))
+        }
+    }
+    rightValues.foreach {
+      case (id, rightValue) ⇒
+        if (id > 0 && !hiddenObjects(id) && !leftValues.contains(id)) {
+          val v = transform(rightValue) * (1 - k)
+          atXValues.push((id, v))
+        }
+    }
+    atXValues.sort((id1, id2) ⇒ order(id1._1).compareTo(order(id2._1)))
+    Interpolation(JSArray.toSeq(atXValues))
   }
 
 }

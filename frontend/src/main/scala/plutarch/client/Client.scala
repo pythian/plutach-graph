@@ -23,6 +23,7 @@ import plutarch.client.data.{ CacheData, DataSource, DummyData }
 import slogging._
 import plutarch.client.ws.{ Handlers, WS }
 import plutarch.shared.Protocol
+import rx._
 import scalatags.JsDom.all._
 
 import scala.scalajs.js.timers._
@@ -31,12 +32,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Client extends LazyLogging {
 
+  implicit val owner = Ctx.Owner.safe()
+
   LoggerConfig.factory = PrintLoggerFactory()
   LoggerConfig.level = LogLevel.DEBUG
 
   var clientId = "unset"
 
   def main(args: Array[String]): Unit = {
+
     // initialize websocket with message handlers
     val ws: WS = WS.create()
     val container = div().render
@@ -71,6 +75,7 @@ object Client extends LazyLogging {
     val cacheData = CacheData.create(dataSource)
     val dummyGraphControl = graph.DummyGraphControl.create(cacheData)
     container.appendChild(dummyGraphControl.root)
+    container.appendChild(dummyGraphControl.tables.component)
 
     pl.onclick = (e: MouseEvent) ⇒ {
       val m = cacheData.state.metrics.toIndexedSeq.zipWithIndex
