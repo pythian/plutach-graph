@@ -37,6 +37,7 @@ trait MetricStoreCreator extends AggregationStoreCreator with RawStoreCreator wi
 
 object MetricStoreCreator {
   class Conf(val name: String, map: Map[String, Any]) {
+    def getAs[T](key: String, default: T): T = map.getOrElse(key, default).asInstanceOf[T]
     def getAs[T](key: String): T = map(key).asInstanceOf[T]
     def set(key: String, value: Any): Conf = new Conf(name, map + (key -> value))
   }
@@ -48,9 +49,18 @@ trait MetricStoreCreatorCreator {
 }
 
 object DefaultMetricStoreCreatorCreator extends MetricStoreCreatorCreator {
+  val HEADER_BASE_SIZE = "headerBaseSize"
+  val STORE_BASE_SIZE = "storeBaseSize"
+  private val DEFAULT_HEADER_BASE_SIZE = 64 * 1024 * 1024
+  private val DEFAULT_STORE_BASE_SIZE = 512 * 1024 * 1024
+
   private class Impl(conf: MetricStoreCreator.Conf) extends MetricStoreCreator {
     def createRawStore(): Raw = Raw.create(conf.name)
-    def createAggregationStore(step: Long, aggregation: Aggregation): AggregationStore = ByteBufferAggregationStore.create(step)
+    def createAggregationStore(step: Long, aggregation: Aggregation): AggregationStore =
+      ByteBufferAggregationStore.create(
+        step,
+        conf.getAs[Int](HEADER_BASE_SIZE, DEFAULT_HEADER_BASE_SIZE),
+        conf.getAs[Int](STORE_BASE_SIZE, DEFAULT_STORE_BASE_SIZE))
     def createObjectsStore(): Objects = Objects.create(conf.name)
   }
   def create(conf: MetricStoreCreator.Conf): MetricStoreCreator = new Impl(conf)

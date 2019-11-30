@@ -16,42 +16,22 @@
 
 package plutarch.server
 
-import java.nio.file.Paths
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.{ ConnectionContext, Http }
+import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import buildinfo.BuildInfo
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.server.config.ServerConfig
 import plutarch.server.data.metricManager.MetricManager
-import plutarch.server.data.persistence.FileManager
 import plutarch.server.data.store.DefaultMetricStoreCreatorCreator
 import plutarch.server.pipelines._
 import plutarch.server.ws.WebSocketFlowCoordinator
-
 import scala.util.{ Failure, Success }
 
 object AppServer extends LazyLogging {
 
-  private def bindAndHandle(route: Route, connectionContext: ConnectionContext, port: Int)(implicit actorSystem: ActorSystem, actorMaterializer: ActorMaterializer): Unit = {
-
-    val futureBinding = Http().bindAndHandle(
-      handler = Route.handlerFlow(route),
-      interface = ServerConfig.interface,
-      port = port,
-      connectionContext = connectionContext)
-
-    futureBinding.onComplete {
-      case Success(binding) ⇒
-        logger.info(s"Server listens on port ${binding.localAddress.getPort}, fullOpt=${BuildInfo.fullOpt}")
-      case Failure(cause) ⇒
-        logger.warn("Could not start server. Cause: {}", cause.getMessage, cause)
-    }(actorSystem.dispatcher)
-  }
-
-  def up(): Unit = {
+  def up(httpPort: Int = 8081, httpsPort: Int = 9091, interface: String = "0.0.0.0"): Unit = {
 
     implicit val actorSystem: ActorSystem = ActorSystem(s"${BuildInfo.name}-actor-system")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -80,14 +60,27 @@ object AppServer extends LazyLogging {
       val ashPipeline = new SmallTestPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
     }
 
+    SparkConnector.init(webSocketFlowCoordinator, metricManager, actorSystem)
+
     val service = new Service(webSocketFlowCoordinator, metricManager)
-    ServerConfig.TLS.connectionContext match {
-      case Success(connectionContext) ⇒ bindAndHandle(service.routes, connectionContext, ServerConfig.TLS.port)
-      case Failure(exception)         ⇒ logger.warn("Could not create TLS connection context", exception)
+
+    for (serverConfig ← ServerConfig(httpPort, httpsPort, interface)) {
+      serverConfig.connectionContext match {
+        case Success(connectionContext) ⇒
+          val futureBinding = Http().bindAndHandle(
+            handler = Route.handlerFlow(service.route),
+            interface = serverConfig.interface,
+            port = serverConfig.port,
+            connectionContext = connectionContext)
+
+          futureBinding.onComplete {
+            case Success(binding) ⇒
+              logger.info(s"Server listens on port ${binding.localAddress.getPort}, fullOpt=${BuildInfo.fullOpt}")
+            case Failure(cause) ⇒
+              logger.warn("Could not start server. Cause: {}", cause.getMessage, cause)
+          }
+        case Failure(exception) ⇒ logger.warn("Could not create TLS connection context", exception)
+      }
     }
-
-    // listen both https and http
-    bindAndHandle(service.routes, ConnectionContext.noEncryption, ServerConfig.port)
   }
-
 }

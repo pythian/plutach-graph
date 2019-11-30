@@ -302,10 +302,10 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
   def drawLineChart(lineData: LineData, metricData: MetricData): Unit = {
     var noDataShown = true
     val (kx, ky, bx, by) = getCoefficients
-    lineData.data.forEach { (points, objId) ⇒
+    lineData.data.forEach { (points: DataView.LDP, objId: Int) ⇒
       val obj = metricData.getObjectById(objId)
       directBeginPath
-      points.forEach { p ⇒
+      points.forEach { p: DataView.LineDataPoint ⇒
         val xCanvas = kx * p.key + bx
         val yCanvas = ky * p.value + by
         if (noDataShown || p.isAppearing) {
@@ -326,11 +326,11 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
   def drawSimpleLineChart(simpleData: SimpleData, metricData: MetricData): Unit = {
     var noDataShown = true
     val (kx, ky, bx, by) = getCoefficients
-    simpleData.data.forEach { (points, objId) ⇒
+    simpleData.data.forEach { (points: DataView.SDP, objId: Int) ⇒
       val obj = metricData.getObjectById(objId)
       directBeginPath
       var first = true
-      points.forEach { p ⇒
+      points.forEach { p: DataView.SimpleDataPoint ⇒
         val xCanvas = kx * p.key + bx
         val yCanvas = ky * p.value + by
         if (first) {
@@ -349,11 +349,11 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
   def drawCombinedLineChart(simpleData: SimpleData, metricData: MetricData): Unit = {
     var noDataShown = true
     val (kx, ky, bx, by) = getCoefficients
-    simpleData.data.forEach { (points, objId) ⇒
+    simpleData.data.forEach { (points: DataView.SDP, objId: Int) ⇒
       val color = plutarch.shared.colors.Default.list1000(objId)
       directBeginPath
       var first = true
-      points.forEach { p ⇒
+      points.forEach { p: DataView.SimpleDataPoint ⇒
         val xCanvas = kx * p.key + bx
         val yCanvas = ky * p.value + by
         if (first) {
@@ -373,10 +373,11 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
     var noDataShown = true
     val (kx, ky, bx, by) = getCoefficients
     val orderedObjects = JSArray.empty[Int]
-    lineData.data.forEach { (_, k) ⇒
+    lineData.data.forEach { (_: DataView.LDP, k: Int) ⇒
       orderedObjects.push(k)
+      ()
     }
-    orderedObjects.sort((id1, id2) ⇒ objectsOrder(id2).compareTo(objectsOrder(id1))).forEach { objId ⇒
+    orderedObjects.sort((id1: Int, id2: Int) ⇒ objectsOrder(id2).compareTo(objectsOrder(id1))).forEach { objId: Int ⇒
       val points = lineData.data.get(objId).asInstanceOf[LDP]
       if (points.length > 0) {
         val obj = metricData.getObjectById(objId)
@@ -384,7 +385,7 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
         var last = -1.0
         var minY = Double.MaxValue
         directBeginPath
-        points.forEach { p ⇒
+        points.forEach { p: DataView.LineDataPoint ⇒
           val xCanvas = kx * p.key + bx
           last = xCanvas
           val yCanvas = ky * p.value + by
@@ -422,7 +423,7 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
   def drawStackedAreaChart(stackedData: StackedData, metricData: MetricData, objectsOrder: Int ⇒ Int): Unit = {
     var noDataShown = true
     val (kx, ky, bx, by) = getCoefficients
-    stackedData.objects.forEach { objId ⇒
+    stackedData.objects.forEach { objId: Int ⇒
       val points = stackedData.data.get(objId).asInstanceOf[DP]
       if (points.length > 0) {
         val obj = metricData.getObjectById(objId)
@@ -430,7 +431,7 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
         var last = -1.0
         var minY = Double.MaxValue
         directBeginPath
-        points.forEach { p ⇒
+        points.forEach { p: DataView.DataPoint ⇒
           val xCanvas = kx * p.key + bx
           last = xCanvas
           val yCanvas = ky * p.value + by

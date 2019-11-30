@@ -18,6 +18,16 @@ package plutarch.server.data.accumulators
 
 import plutarch.shared.data.Aggregations._
 
+// stub for 2.11
+class PercentileAccumulator(percentiles: Seq[Double]) extends Accumulator {
+  override def add(t: Long, value: Double): Unit = {}
+  def getCountDistinct: Int = 0
+  def getPercentileCont(p: Double): Double = 0
+  def getPercentileDesc(p: Double): Double = 0
+}
+
+/*
+// for 2.12
 class PercentileAccumulator(percentiles: Seq[Double]) extends Accumulator {
   assert(percentiles.forall(x ⇒ 0 <= x && x <= 1))
   private class Elem(val value: Double, var left: Option[Elem], var right: Option[Elem], var count: Int = 1)
@@ -107,6 +117,7 @@ class PercentileAccumulator(percentiles: Seq[Double]) extends Accumulator {
     Math.sqrt(toIterator.map(x ⇒ (x._1 - avg) * (x._1 - avg) * x._2).sum / (length - 1))
   }
 }
+*/
 
 object PercentileAccumulator extends AccumulatorCompanion {
   type A = PercentileAccumulator

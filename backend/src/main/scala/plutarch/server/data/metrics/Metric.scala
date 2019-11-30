@@ -40,9 +40,11 @@ trait Metric {
   def get(aggregation: Aggregation, requestId: Int, scale: Int, intervals: Seq[(Long, Long)])(implicit executor: ExecutionContext): Future[ByteBuffer]
   def getCurrent(aggregation: Aggregation)(scale: Int): ((Long, Long, Seq[(Int, Any)]), Seq[DataObject])
   def getCurrentKey: Long
+  def freeze()(implicit executor: ExecutionContext): Unit
   // testing workaroung
   def push(t: Long, values: Seq[(String, Double)]): Unit
   def pop(): Seq[(Long, Seq[(String, Double)])]
+  def close(): Unit
 }
 
 // todo: possible bug: have to request objects wider than data to cover with step ?
@@ -88,6 +90,7 @@ object Metric {
       val futures = scalesStoreList.map(ss ⇒ ss.add(t, valuesIds))
       Future.sequence(futures).map(_ ⇒ ())
     }
+
     private def join(requestId: Int, aggregation: Aggregation, fobjs: Future[ByteBuffer], fdata: Future[ByteBuffer])(implicit executor: ExecutionContext): Future[ByteBuffer] = {
       for {
         objs ← fobjs
@@ -107,11 +110,13 @@ object Metric {
         buffer
       }
     }
+
     def get(aggregation: Aggregation, requestId: Int, scale: Int, x: Long, y: Long)(implicit executor: ExecutionContext): Future[ByteBuffer] = {
       val fobjs = objectsStore.get(x, y)
       val fdata = scalesStore(scale).get(aggregation, x, y)
       join(requestId, aggregation, fobjs, fdata)
     }
+
     private def join2(requestId: Int, aggregation: Aggregation, fobjs: Future[ByteBuffer], fdata: Future[Seq[ByteBuffer]])(implicit executor: ExecutionContext): Future[ByteBuffer] = {
       for {
         objs ← fobjs
@@ -145,6 +150,17 @@ object Metric {
     }
 
     def getCurrentKey: Long = rawStore.current
+
+    def freeze()(implicit executor: ExecutionContext): Unit = {
+      scalesStoreList.foreach(_.freeze())
+      rawStore.fzeeze()
+    }
+
+    def close(): Unit = {
+      objectsStore.close()
+      scalesStoreList.foreach(_.close())
+      rawStore.close()
+    }
 
   }
 }

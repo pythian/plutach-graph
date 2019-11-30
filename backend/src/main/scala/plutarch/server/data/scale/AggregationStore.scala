@@ -26,6 +26,7 @@ import plutarch.shared.data.Aggregations.Aggregation
 trait AggregationStore {
   def add(key: Long, value: ByteBuffer): Future[Unit]
   def get(x: Long, y: Long): Future[ByteBuffer]
+  def close(): Unit
 }
 
 object AggregationStore extends LazyLogging {

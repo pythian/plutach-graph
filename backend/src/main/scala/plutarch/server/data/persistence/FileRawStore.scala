@@ -80,10 +80,15 @@ class FileRawStore(
 
   import FileRawStore._
 
+  private var frozen = false
+
   private val fst = new AtomicLong(initFirst)
   private val cur = new AtomicLong(initCurrent)
 
   def put(t: Long, values: Seq[(String, Double)]): Future[Unit] = {
+    if (frozen) {
+      throw new RuntimeException(s"FileRawStore store is frozen")
+    }
     if (first == Long.MaxValue) {
       fst.compareAndSet(Long.MaxValue, t)
     }
@@ -112,5 +117,11 @@ class FileRawStore(
   def first: Long = fst.get()
   def current: Long = cur.get()
   def iterator: TIter = getIterator(afs.path)
-  def close(): Unit = afs.close()
+  override def fzeeze(): Unit = {
+    frozen = true
+    cur.set(Long.MaxValue / 2)
+  }
+  override def close(): Unit = {
+    afs.close()
+  }
 }

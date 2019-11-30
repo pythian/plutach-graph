@@ -24,6 +24,8 @@ trait Raw {
   def first: Long
   def current: Long
   def iterator: Iterator[(Long, Seq[(String, Double)])]
+  def fzeeze(): Unit
+  def close(): Unit
 }
 
 object Raw {
@@ -37,18 +39,38 @@ object Raw {
       Future.successful()
     }
     def iterator: Iterator[(Long, Seq[(String, Double)])] = Iterator.empty
+    def fzeeze(): Unit = {}
+    def close(): Unit = {}
   }
 
   class Impl(name: String) extends Raw {
+    var isClosed = false
+    var frozen = false
     var first: Long = Long.MaxValue
     var current: Long = Long.MinValue
     private var store: List[(Long, Seq[(String, Double)])] = Nil
     def put(t: Long, values: Seq[(String, Double)]): Future[Unit] = {
-      if (first == Long.MaxValue) first = t
+      if (isClosed) {
+        throw new RuntimeException(s"Raw store $name is closed")
+      }
+      if (frozen) {
+        throw new RuntimeException(s"Raw store $name is frozen")
+      }
+      if (first == Long.MaxValue) {
+        first = t
+      }
       store = (t, values) :: store
       current = current max t
       Future.successful()
     }
     def iterator: Iterator[(Long, Seq[(String, Double)])] = store.iterator
+    def fzeeze(): Unit = {
+      frozen = true
+      current = Long.MaxValue / 2
+    }
+    def close(): Unit = {
+      store = null
+      isClosed = true
+    }
   }
 }

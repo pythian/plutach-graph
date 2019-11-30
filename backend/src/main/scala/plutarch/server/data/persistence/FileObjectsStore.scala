@@ -174,7 +174,8 @@ class FileObjectsStore(
     states.commit()
   }
 
-  def close(): Unit = {
+  override def close(): Unit = {
+    super.close()
     names.close()
     states.close()
   }

@@ -23,6 +23,7 @@ import scala.collection.mutable.{ Queue ⇒ MQueue }
 
 trait Colors {
   def next(): String
+  def clear(): Unit
 }
 
 object Colors {
@@ -287,6 +288,10 @@ object Colors {
       } else {
         generate()
       }
+    }
+
+    override def clear(): Unit = {
+      last.clear()
     }
 
   }

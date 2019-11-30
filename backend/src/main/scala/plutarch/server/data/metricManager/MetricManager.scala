@@ -42,8 +42,17 @@ class MetricManager(val storeCreatorCreator: MetricStoreCreatorCreator) extends 
     logger.info("registered metric={}", metric.name)
     metric
   }
+
   def listNames: Seq[String] = metrics.keys.toSeq
   def getMetric(name: String): Option[Metric] = metrics.get(name)
+  def drop(name: String): Unit = {
+    metrics.get(name) match {
+      case Some(x) ⇒
+        metrics = metrics - name
+        x.close()
+      case None ⇒
+    }
+  }
 
   // todo get from persist or register new
   // todo runtime registration and creation via API

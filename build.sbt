@@ -4,13 +4,14 @@ organizationName := "Plutarch"
 
 version := "0.1"
 
-lazy val scalaV = "2.12.4"
+lazy val scalaV = "2.11.8"
 lazy val akkaV = "2.5.21"
 lazy val akkaHttpV = "10.1.8"
 
 lazy val boopickleV = "1.3.0"
 lazy val upickleV = "0.4.4"
 lazy val scalatagsV = "0.6.7"
+lazy val sparkVer = "2.3.4"
 
 lazy val scalacssV = "0.5.5"
 lazy val faV = "5.0.10"
@@ -61,14 +62,17 @@ lazy val backend =
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "com.typesafe" % "config" % "1.3.2",
 
+        "org.apache.spark"  %% "spark-core" % sparkVer % Provided,
+        "org.apache.spark"  %% "spark-sql" % sparkVer % Provided,
+
         "com.typesafe.akka" %% "akka-testkit" % akkaV,
         "org.scalactic" %% "scalactic" % "3.0.3",
         "org.scalatest" %% "scalatest" % "3.0.3" % "test",
-        "commons-io" % "commons-io" % "2.6" % "test",
+        "commons-io" % "commons-io" % "2.6" % "test"
 
         // misc
-        "org.twitter4j" % "twitter4j-stream" % "4.0.7",
-        "org.json4s" %% "json4s-jackson" % "3.6.5",
+        //"org.twitter4j" % "twitter4j-stream" % "4.0.7",
+        //"org.json4s" %% "json4s-jackson" % "3.6.5",
       ),
       resourceGenerators in Compile += Def.task {
         val f1 = (jsOpts in Compile in frontend).value.data
@@ -87,12 +91,16 @@ lazy val backend =
       watchSources ++= (watchSources in frontend).value,
       assemblyJarName in assembly := "backend.jar",
       assemblyMergeStrategy in assembly := {
-        case PathList("application.conf") => MergeStrategy.discard
+        //case PathList("application.conf") => MergeStrategy.discard
         case PathList("logback.xml") => MergeStrategy.discard
         case x =>
           val oldStrategy = (assemblyMergeStrategy in assembly).value
           oldStrategy(x)
       },
+      // to make it work with spark
+      assemblyShadeRules in assembly := Seq(
+        ShadeRule.rename("com.fasterxml.**" -> "shaded.fasterxml.@1").inAll
+      ),
       fork in run := true,
       fork in Test := true
     )

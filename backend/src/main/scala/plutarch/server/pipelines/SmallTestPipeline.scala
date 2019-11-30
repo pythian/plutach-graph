@@ -52,7 +52,8 @@ class SmallTestPipeline(
 
     publish(t0 - 3000, Seq(("A", 1.0)))
     publish(t0 - 2000, Seq(("B", 1.0)))
-    publish(t0 - 1000, Seq()) // last message is current, so we either have to publish is to websocket or explicitly "close"
+    //publish(t0 - 1000, Seq()) // last message is current, so we either have to publish is to websocket or explicitly "close"
+    metric.freeze()
 
   }
 

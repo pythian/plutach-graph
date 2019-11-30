@@ -27,6 +27,7 @@ import plutarch.server.data.store.AggregationStoreCreator
 trait AggregationsStore {
   def add(curr: CurrentR)(implicit executor: ExecutionContext): Future[Unit]
   def get(aggregation: Aggregation, x: Long, y: Long)(implicit executor: ExecutionContext): Future[ByteBuffer]
+  def close(): Unit
 }
 
 object AggregationsStore extends LazyLogging {
@@ -49,6 +50,9 @@ object AggregationsStore extends LazyLogging {
     }
     def get(aggregation: Aggregation, x: Long, y: Long)(implicit executor: ExecutionContext): Future[ByteBuffer] = {
       aggregationStores(aggregation).get(x, y)
+    }
+    override def close(): Unit = {
+      aggregationStores.foreach(_._2.close())
     }
   }
 }

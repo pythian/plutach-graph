@@ -29,6 +29,7 @@ trait Objects {
   def get(intervals: Seq[(Long, Long)])(implicit executor: ExecutionContext): Future[ByteBuffer]
   def getDe(left: Long, right: Long): Seq[DataObject]
   def getDe(intervals: Seq[(Long, Long)]): Seq[DataObject]
+  def close(): Unit
 }
 
 object Objects {

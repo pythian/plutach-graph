@@ -19,27 +19,31 @@ package plutarch.server.data.scale
 import java.nio.ByteBuffer
 
 import com.typesafe.scalalogging.LazyLogging
-import plutarch.shared.collection.ByteRangeMap
+import plutarch.shared.collection.{ ByteRangeMap, Destroyer }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 object ByteBufferAggregationStore {
-  def rangeMapBufferSize(step: Long): Int = (128L * 1024L * 1024L * 1024L / step).toInt
-  def storeBufferSize(step: Long): Int = (512L * 1024L * 1024L * 1024L / step).toInt
   val emptyByteBuffer: ByteBuffer = ByteBuffer.wrap(Array[Byte]())
-  def create(step: Long): ByteBufferAggregationStore = new ByteBufferAggregationStore(step)
+  def create(step: Long, headerBaseSize: Int, storeBaseSize: Int): ByteBufferAggregationStore =
+    new ByteBufferAggregationStore(step, headerBaseSize, storeBaseSize)
 }
 
-class ByteBufferAggregationStore(step: Long) extends AggregationStore with LazyLogging {
+class ByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBaseSize: Int) extends AggregationStore with LazyLogging {
   import ByteBufferAggregationStore._
+
+  private var isClosed = false
 
   private case class State(firstKey: Long = Long.MaxValue, currKey: Long = Long.MinValue, currOffset: Int = 0)
   @volatile private var state = State()
 
-  private val offsets = new ByteRangeMap(step, rangeMapBufferSize(step))
-  private val byteBuffer = ByteBuffer.allocateDirect(storeBufferSize(step))
+  private val offsets = new ByteRangeMap(step, headerBaseSize / (step / 1000L).toInt)
+  private val byteBuffer = ByteBuffer.allocateDirect(storeBaseSize / (step / 1000L).toInt)
 
   def add(key: Long, value: ByteBuffer): Future[Unit] = {
+    if (isClosed) {
+      throw new RuntimeException(s"Trying to call checkState on closed ByteBufferAggregationStore")
+    }
     //logger.debug(s"ByteBufferAggregationStore($step) recived key=$key, state.currKey=${state.currKey}")
 
     val newCurrentOffset = state.currOffset + value.limit()
@@ -76,5 +80,12 @@ class ByteBufferAggregationStore(step: Long) extends AggregationStore with LazyL
     } else {
       emptyByteBuffer
     }
+  }
+
+  override def close(): Unit = {
+    isClosed = true
+    state = null
+    offsets.close()
+    Destroyer.destroy(byteBuffer)
   }
 }

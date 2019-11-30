@@ -18,7 +18,7 @@ package plutarch.server.pipelines
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ ActorSystem, Cancellable }
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.server.data.metricManager.MetricManager
 import plutarch.server.data.metrics.Metric
@@ -26,7 +26,7 @@ import plutarch.server.ws.WebSocketFlowCoordinator
 import plutarch.shared.data.Aggregations
 import plutarch.shared.data.metrics.Conf
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ExternalPipeline(
@@ -40,19 +40,19 @@ class ExternalPipeline(
     name = "External",
     step = 1000,
     scales = Seq(1, 5, 10, 30, 60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24),
-    aggregations = Seq(Sum, Min, Max, Count, Avg,
-      //PercentileCont(0.01),
-      //PercentileCont(0.05),
-      //PercentileCont(0.10),
-      //PercentileCont(0.25),
-      //PercentileCont(0.50),
-      //PercentileCont(0.75),
-      //PercentileCont(0.90),
-      //PercentileCont(0.95),
-      //PercentileCont(0.99),
-      //Stdev,
-      //First,
-      //Last
+    aggregations = Seq(Sum, Min, Max, Count, Avg
+    //PercentileCont(0.01),
+    //PercentileCont(0.05),
+    //PercentileCont(0.10),
+    //PercentileCont(0.25),
+    //PercentileCont(0.50),
+    //PercentileCont(0.75),
+    //PercentileCont(0.90),
+    //PercentileCont(0.95),
+    //PercentileCont(0.99),
+    //Stdev,
+    //First,
+    //Last
     ),
     withTotal = false)
 
@@ -69,7 +69,7 @@ class ExternalPipeline(
     lazy val schedule: Cancellable = system.scheduler.schedule(0 second, conf.step / 5 millis) {
       val curr = System.currentTimeMillis()
       val data = metric.pop()
-      val totalData = data.flatMap(_._2.groupBy(_._1).mapValues(v => v.map(_._2).sum).toList)
+      val totalData = data.flatMap(_._2.groupBy(_._1).mapValues(v ⇒ v.map(_._2).sum).toList)
       Try(publish(curr, totalData)) match {
         case Success(_) ⇒
         case Failure(ex) ⇒

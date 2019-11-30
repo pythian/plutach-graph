@@ -30,6 +30,11 @@ import scala.scalajs.js.timers._
 import scala.language.postfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
 
+// todo: handle dropped metric at frontend
+// todo: add protocol to send interval for selecting on backend
+// todo: initial position == last data
+// todo: custom size ob bb
+// todo: client state save at server to reload page with the same layout?
 object Client extends LazyLogging {
 
   implicit val owner = Ctx.Owner.safe()
@@ -44,14 +49,13 @@ object Client extends LazyLogging {
     // initialize websocket with message handlers
     val ws: WS = WS.create()
     val container = div().render
-    val pl = div(h1("PLUTARCH")).render
-    window.onload = _ ⇒ {
+    val pl = div(h5("PLUTARCH", backgroundColor := "#A0FFA0")).render
+    window.onload = (_: Event) ⇒ {
       document.body.appendChild(pl)
       document.body.appendChild(container)
     }
     ws.ready.foreach { _ ⇒
       initialization(ws, container, pl)
-      //initialization0(ws, container)
     }
   }
 

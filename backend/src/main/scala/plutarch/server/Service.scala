@@ -36,7 +36,7 @@ class Service(
 
   private val locator = new WebJarAssetLocator
 
-  def routes: Route =
+  def route: Route =
     handleRejections(rejectionHandler) {
       path("web" / "js" / Pages.tmsp / Segment) { name ⇒ encodeResponse(getFromResource(s"web/js/$name")) } ~
         path("web" / "lib" / Remaining) { ref ⇒

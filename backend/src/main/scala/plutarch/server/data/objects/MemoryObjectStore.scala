@@ -65,6 +65,8 @@ abstract class MemoryObjectStore(initId: Int, initState: MemoryObjectStore.State
 
   import MemoryObjectStore._
 
+  private var isClosed = false
+
   // currently recreate new each time!
   private val colors = Colors.create()
 
@@ -75,6 +77,9 @@ abstract class MemoryObjectStore(initId: Int, initState: MemoryObjectStore.State
   def getState: State = state
 
   def checkState(t: Long, name: String, initColor: Option[String]): Result = {
+    if (isClosed) {
+      throw new RuntimeException(s"Trying to call checkState on closed MemoryObjectStore")
+    }
     state.nameToId.get(name) match {
       case Some(objId) ⇒
         val prevObjState = state.idToObjState(objId)
@@ -144,6 +149,13 @@ abstract class MemoryObjectStore(initId: Int, initState: MemoryObjectStore.State
     val objectsStr = thisState.nameToId.toList.sortBy(_._2).map(x ⇒ s""""${x._1}": ${x._2}""").mkString("[", ", ", "]")
     val idObjTimeStr = thisState.idToObjState.toList.sortBy(_._1).map(x ⇒ s""""${x._1}": ${x._2}""").mkString("[", ", ", "]")
     s"""{"curId": ${curId.get()}, "objects": $objectsStr, "idObjTime": $idObjTimeStr, "times": ${thisState.times}}"""
+  }
+
+  override def close(): Unit = {
+    isClosed = true
+    colors.clear()
+    curId.set(Int.MinValue)
+    state = null
   }
 
 }

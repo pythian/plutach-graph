@@ -46,11 +46,10 @@ class AshPipeline(
     withTotal = true)
 
   val confs: Seq[Conf] = Seq(
-    getConf("wait_class"),
-    getConf("event"),
-    getConf("type"),
-    getConf("sql_id"),
-  )
+    getConf("sl_wait_class"),
+    getConf("sl_event"),
+    getConf("sl_type"),
+    getConf("sl_sql_id"))
 
   val metrics: Map[String, Metric] = confs.map(c ⇒ c.name -> metricManager.getOrCreate(c)).toMap
 
@@ -64,6 +63,7 @@ class AshPipeline(
         publish(name, t, Seq((obj, 1.0)))
       }
       Await.ready(Future.sequence(futures), (600 * 1000) millis)
+      metrics(name).freeze()
       logger.info(s"Loaded metric $name")
     }
   }
