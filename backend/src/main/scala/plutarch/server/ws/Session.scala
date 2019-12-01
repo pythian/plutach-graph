@@ -116,6 +116,21 @@ class Session(req: Option[String], sessionCoordinatorRef: ActorRef, metricManage
             val msg = Protocol.WSMetricsConfs(confs.toMap)
             sendTextMessage(write(msg))
             sessionCoordinatorRef ! Events.Subscribe(self, metrics)
+            for {
+              name ← metrics
+              metric ← metricManager.getMetric(name)
+            } {
+              val currents = for {
+                scale ← metric.meta.conf.scales
+                agg ← metric.meta.conf.aggregations
+              } yield {
+                val ((key, version, data), objects) = metric.getCurrent(agg)(scale)
+                val currentData: Map[Int, Double] = data.view.map(x ⇒ (x._1, agg.getDouble(x._2))).toMap
+                Protocol.CurrentData(agg, scale, key, version, currentData, objects)
+              }
+              val msg = Protocol.WSCurrents(name, metric.getCurrentKey, currents)
+              sendTextMessage(write(msg))
+            }
           case Protocol.WSSubscribeRealTime(metric, aggregation, scale, clientId, active) ⇒
             //log.debug(s"Subscribed metric=$metric, aggregation=$aggregation, scale=$scale, clientId=$clientId, active=$active")
             var aggs = rtsubscriptions.getOrElse(metric, Map.empty)

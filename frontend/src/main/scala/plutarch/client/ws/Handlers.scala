@@ -49,6 +49,7 @@ object Handlers extends LazyLogging {
         case other                     ⇒ logger.info("get other TextMessage {}", other)
       }
     case WS.BinaryMessage(buffer) ⇒
+      //logger.info(s"Received binary, size=${buffer.limit() - buffer.position()}")
       val combined: Picklers.CombinedData[_] = Picklers.extract(buffer)
       cacheData.receive(combined)
   }

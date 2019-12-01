@@ -66,7 +66,7 @@ object Raw {
     def iterator: Iterator[(Long, Seq[(String, Double)])] = store.iterator
     def fzeeze(): Unit = {
       frozen = true
-      current = Long.MaxValue / 2
+      current += 1000L
     }
     def close(): Unit = {
       store = null
