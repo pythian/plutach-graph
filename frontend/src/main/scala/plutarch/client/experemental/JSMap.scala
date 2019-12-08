@@ -40,7 +40,9 @@ object JSMap {
     elems.foreach(elem ⇒ res.set(elem._1, elem._2))
     res
   }
+
   def empty[K, V]: JSMap[K, V] = new JSMap[K, V]
+
   @inline
   def getOrElseUpdate[K, V](map: JSMap[K, V], key: K, value: ⇒ V): V = {
     val uv = map.get(key)
@@ -52,4 +54,36 @@ object JSMap {
       v
     }
   }
+
+  class JSMapValues[V >: Null](underlying: JSMap[Double, V]) extends Values[V] with MValues[V] {
+
+    override def set(k: Double, v: V): Unit = {
+      underlying.set(k, v)
+    }
+
+    override def delete(k: Double): Unit = underlying.delete(k)
+
+    override def getOrElse[T >: V](k: Double, default: T): T = {
+      val u = underlying.get(k)
+      if (u.isDefined) {
+        u.asInstanceOf[V]
+      } else {
+        default
+      }
+    }
+
+    override def from[T >: V](k: Double, step: Double, default: T): () ⇒ T = {
+      var key = k
+      () ⇒ {
+        val res = getOrElse(key, default)
+        key += step
+        res
+      }
+    }
+
+  }
+
+  @inline
+  def asValues[V >: Null](map: JSMap[Double, V]) = new JSMapValues(map)
+
 }

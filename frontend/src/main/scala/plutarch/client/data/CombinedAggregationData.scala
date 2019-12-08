@@ -36,8 +36,8 @@ class CombinedAggregationData(objId: Int, aggregations: Seq[Aggregation], aggreg
       def bestScale: Int = first.bestScale
       val values: SimpleMap[Double, collection.Map[Int, Double]] = {
         new SimpleMap[Double, collection.Map[Int, Double]] {
-          def get(key: Double): collection.Map[Int, Double] = mviews.mapValues(_.values.get(key).get.apply(objId))
-          def contains(key: Double): Boolean = first.values.has(key)
+          def get(key: Double): collection.Map[Int, Double] = mviews.mapValues(_.values.getOrElse(key, null).apply(objId))
+          def contains(key: Double): Boolean = first.values.getOrElse(key, null) != null
         }
       }
       def info: DataView.Info = first.info // todo this is used for subscription of online! but we have to add aggregation list here too!

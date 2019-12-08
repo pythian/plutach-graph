@@ -23,6 +23,7 @@ import js.annotation._
 @JSGlobal("Array")
 class JSArray[A] extends js.Object {
   jsArray ⇒
+  def this(arrayLength: Int) = this()
   def length: Int = js.native
   @JSBracketAccess
   def apply(index: Int): A = js.native

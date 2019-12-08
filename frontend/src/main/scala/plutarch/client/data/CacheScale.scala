@@ -18,7 +18,7 @@ package plutarch.client.data
 
 import scala.collection.Map
 import scala.collection.mutable.{ Map ⇒ MMap }
-import plutarch.client.experemental.JSMap
+import plutarch.client.experemental.{ JSMap, PageValues, Values }
 import plutarch.shared.collection.DisjointIntervalSetDouble
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.shared.data.Picklers
@@ -65,7 +65,7 @@ object CacheScale {
       right:     Double,
       step:      Double,
       bestScale: Int,
-      values:    JSMap[Double, Map[Int, Double]]) extends DataView
+      values:    Values[Map[Int, Double]]) extends DataView
 
   case class WatermarkRequest(req: Protocol.WSHistRequest, current: Double)
 
@@ -87,7 +87,8 @@ class CacheScale(scale: Int, cacheState: CacheState, meta: Meta, aggregation: Ag
   cache ⇒
 
   private val step = meta.conf.step * scale
-  private val data = JSMap.empty[Double, Map[Int, Double]]
+  //private val data = JSMap.asValues(JSMap.empty[Double, Map[Int, Double]])
+  private val data = PageValues[Map[Int, Double]](5000, step)
   private val cachedSet = DisjointIntervalSetDouble.empty
   private val requestedSet = DisjointIntervalSetDouble.empty
   private val state = new CacheScaleState(step, meta)

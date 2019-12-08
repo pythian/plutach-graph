@@ -45,11 +45,13 @@ class AshPipeline(
     aggregations = Seq(Sum),
     withTotal = true)
 
-  val confs: Seq[Conf] = Seq(
-    getConf("sl_wait_class"),
-    getConf("sl_event"),
-    getConf("sl_type"),
-    getConf("sl_sql_id"))
+  //  val confs: Seq[Conf] = Seq(
+  //    getConf("sl_wait_class"),
+  //    getConf("sl_event"),
+  //    getConf("sl_type"),
+  //    getConf("sl_sql_id"))
+
+  val confs: Seq[Conf] = Seq(getConf("sl_event"))
 
   val metrics: Map[String, Metric] = confs.map(c ⇒ c.name -> metricManager.getOrCreate(c)).toMap
 

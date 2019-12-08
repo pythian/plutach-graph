@@ -16,7 +16,8 @@
 
 package plutarch.client.data
 
-import plutarch.client.experemental.{ JSArray, JSMap, JSSet }
+import plutarch.client.experemental.{ JSArray, JSMap, JSSet, Values }
+
 import scala.collection.Map
 
 /*
@@ -37,7 +38,7 @@ object DataView {
   case class EmptyDataView(step: Double, reqLeft: Double, reqRight: Double, bestScale: Int, info: Info) extends DataView {
     def left: Double = 0
     def right: Double = -1
-    def values: JSMap[Double, Map[Int, Double]] = JSMap.empty
+    def values: Values[Map[Int, Double]] = Values.Empty
   }
 
   type SDP = JSArray[SimpleDataPoint]
@@ -91,7 +92,7 @@ trait DataView {
   def right: Double
   def step: Double
   def bestScale: Int
-  def values: JSMap[Double, Map[Int, Double]]
+  def values: Values[Map[Int, Double]]
   def info: Info
 
   def total(transform: Double ⇒ Double): LineData = ???
@@ -101,8 +102,9 @@ trait DataView {
     val right = (x1 / step).ceil * step
     var key = left
     val data: JSMap[Int, Double] = JSMap.empty[Int, Double]
+    val next = values.from(left, step, Map.empty)
     while (key <= right) {
-      for ((id, value) ← values.get(key).getOrElse(Map.empty) if !hiddenObjects(id) && id > 0) {
+      for ((id, value) ← next() if !hiddenObjects(id) && id > 0) {
         data.set(id, data.get(id).getOrElse(0.0) + value)
       }
       key += step
@@ -137,10 +139,10 @@ trait DataView {
     var prevObjs = JSSet.empty[Int]
     var prevObjsValues = JSMap.empty[Int, Double]
     var key = left
+    val next = values.from(left, step, null)
     while (key < right) {
-      val uobjs = values.get(key)
-      if (uobjs.isDefined) {
-        val objs = uobjs.asInstanceOf[Map[Int, Double]]
+      val objs = next()
+      if (objs != null) {
         val currObjs = JSSet.empty[Int]
         val orderedObjs = JSArray.empty[Int]
         objs.keys.foreach { objId ⇒
@@ -200,10 +202,10 @@ trait DataView {
     var prevObjs = JSSet.empty[Int]
     var key = left
     val ds = step
+    val next = values.from(left, step, null)
     while (key < right) {
-      val uobjs = values.get(key)
-      if (uobjs.isDefined) {
-        val objs = uobjs.asInstanceOf[Map[Int, Double]]
+      val objs = next()
+      if (objs != null) {
         val currObjs = JSSet.empty[Int]
         objs.foreach {
           case (objId, value) ⇒
@@ -242,9 +244,10 @@ trait DataView {
     val objects = JSMap.empty[Int, SDP]
     var key = left
     val ds = step
+    val next = values.from(left, step, null)
     while (key < right) {
-      if (values.has(key)) {
-        val objs = values.get(key).asInstanceOf[Map[Int, Double]]
+      val objs = next()
+      if (objs != null) {
         objs.foreach {
           case (objId, value) ⇒
             if (objId > 0 && !hiddenObjects(objId)) {
@@ -260,15 +263,12 @@ trait DataView {
     SimpleData(objects, rangeBuilder.result())
   }
 
-  var cnt = 0;
-
   def interpolation(x: Double, order: Int ⇒ Int, hiddenObjects: Set[Int], transform: Double ⇒ Double): Interpolation = {
     val left = (x / step).floor * step
     val right = (x / step).ceil * step
     val k = (right - x) / step
-
-    val leftValues: Map[Int, Double] = values.get(left).getOrElse(Map.empty)
-    val rightValues: Map[Int, Double] = values.get(right).getOrElse(Map.empty)
+    val leftValues: Map[Int, Double] = values.getOrElse(left, Map.empty)
+    val rightValues: Map[Int, Double] = values.getOrElse(right, Map.empty)
     val atXValues = JSArray.empty[(Int, Double)]
     leftValues.foreach {
       case (id, leftValue) ⇒

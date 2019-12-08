@@ -16,11 +16,10 @@
 
 package plutarch.client.data
 
-import plutarch.client.experemental.JSMap
+import plutarch.client.experemental.{ JSMap, Values }
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.shared.data.{ Aggregations, DataObject }
 import plutarch.shared.data.metrics.Conf
-
 import Aggregations._
 
 import scala.collection.Map
@@ -91,7 +90,7 @@ object DummyData {
 
           def bestScale: Int = scale
 
-          val values: JSMap[Double, Map[Int, Double]] = {
+          val values: Values[Map[Int, Double]] = {
             val data = JSMap.empty[Double, Map[Int, Double]]
             var key = left
             while (key <= right) {
@@ -112,7 +111,7 @@ object DummyData {
               //data.update(key, Map(1 -> value1, 2 -> value2, 3 -> value3, 4 -> value4))
               key += step
             }
-            data
+            JSMap.asValues(data)
           }
         }
       }
