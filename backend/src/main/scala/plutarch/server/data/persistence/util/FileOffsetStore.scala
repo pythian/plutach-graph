@@ -106,6 +106,8 @@ class FileOffsetStore(channel: FileChannel, val path: Path) extends RangeMap wit
   private val body = channel.map(FileChannel.MapMode.READ_WRITE, HEADER_SIZE, bodySize)
   body.position(posVar.get.toInt)
 
+  override def hasRemaining: Boolean = true
+
   def add(key: Long, offset: Int): Unit = {
     if (remainingVar.get > 0) {
       if (posVar.get == 0) {

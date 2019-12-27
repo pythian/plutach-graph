@@ -26,7 +26,7 @@ import plutarch.server.data.metrics.Metric
 import plutarch.server.data.store
 import plutarch.server.data.store.{ DefaultMetricStoreCreatorCreator, MetricStoreCreator }
 import plutarch.server.ws.WebSocketFlowCoordinator
-import plutarch.shared.data.Aggregations.Sum
+import plutarch.shared.data.Aggregations.{ Max, Mean, Min, Sum }
 import plutarch.shared.data.metrics.Conf
 
 import scala.concurrent.{ Await, Future }
@@ -51,10 +51,12 @@ object SparkConnector {
 
   private def getConf(name: String): Conf = Conf(
     name = name,
-    step = 1000,
-    scales = Seq(1, 5, 10, 30, 60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24),
-    aggregations = Seq(Sum),
-    withTotal = true)
+    step = 60000,
+    //step = 1000,
+    scales = Seq(60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24).map(_ / 60),
+    //scales = Seq(1, 5, 10, 30, 60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24),
+    aggregations = Seq(Max, Min),
+    withTotal = false)
 
   def create(name: String): SparkConnector = {
     create(name, MetricStoreCreator.newConf(name))

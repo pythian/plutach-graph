@@ -18,7 +18,7 @@ package plutarch.server.data.store
 
 import plutarch.server.data.objects.Objects
 import plutarch.server.data.raw.Raw
-import plutarch.server.data.scale.{ AggregationStore, ByteBufferAggregationStore }
+import plutarch.server.data.scale.{ AggregationStore, MultiByteBufferAggregationStore }
 import plutarch.shared.data.Aggregations.Aggregation
 
 trait AggregationStoreCreator {
@@ -57,7 +57,7 @@ object DefaultMetricStoreCreatorCreator extends MetricStoreCreatorCreator {
   private class Impl(conf: MetricStoreCreator.Conf) extends MetricStoreCreator {
     def createRawStore(): Raw = Raw.create(conf.name)
     def createAggregationStore(step: Long, aggregation: Aggregation): AggregationStore =
-      ByteBufferAggregationStore.create(
+      MultiByteBufferAggregationStore.create(
         step,
         conf.getAs[Int](HEADER_BASE_SIZE, DEFAULT_HEADER_BASE_SIZE),
         conf.getAs[Int](STORE_BASE_SIZE, DEFAULT_STORE_BASE_SIZE))

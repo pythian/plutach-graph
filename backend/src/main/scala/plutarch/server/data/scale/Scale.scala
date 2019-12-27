@@ -37,6 +37,8 @@ trait Scale {
   def close(): Unit
 }
 
+// TODO better error
+// TODO buffered aggregation store to have better buffering
 object Scale extends LazyLogging {
   val totalId = 0
   private val timeout = 10 seconds

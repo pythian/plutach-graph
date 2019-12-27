@@ -110,6 +110,8 @@ class ImmutableFileOffsetStore(channel: FileChannel, val path: Path) extends Ran
 
   val step: Long = stepVar.get
 
+  override def hasRemaining: Boolean = true
+
   def add(key: Long, offset: Int): Unit = {
     throw new RuntimeException("Trying to modify immutable store")
   }

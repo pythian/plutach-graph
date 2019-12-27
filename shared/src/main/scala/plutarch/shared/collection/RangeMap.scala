@@ -21,6 +21,7 @@ import java.nio.ByteBuffer
 // trait manages sequenced key-value storing of key = step*i + x0
 trait RangeMap {
   def step: Long
+  def hasRemaining: Boolean
   def add(key: Long, offset: Int): Unit
   def getOrElse(key: Long, default: ⇒ Int): Int
   def getAsBuffer: ByteBuffer
@@ -34,6 +35,9 @@ class ByteRangeMap(val step: Long, capacity: Int) extends RangeMap {
   private var first = Long.MinValue
   private var current = Long.MinValue
   private var offsets = ByteBuffer.allocateDirect(capacity)
+  def hasRemaining: Boolean = {
+    offsets.hasRemaining
+  }
   def add(key: Long, offset: Int): Unit = {
     if (first == Long.MinValue) {
       first = key
