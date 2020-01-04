@@ -202,7 +202,7 @@ class CacheScale(scale: Int, cacheState: CacheState, meta: Meta, aggregation: Ag
     req
   }
 
-  private def request(left: Double, right: Double): Unit = {
+  def request(left: Double, right: Double): Unit = {
     val adjInterval = Interval(left - state.checkDist, (right + state.checkDist).min(state.watermark))
     // not cached and not yet requested
     val remaining = cachedSet.diff(adjInterval).flatMap(interval ⇒ requestedSet.diff(interval))
@@ -263,8 +263,9 @@ class CacheScale(scale: Int, cacheState: CacheState, meta: Meta, aggregation: Ag
 
     requestedSet.remove(req.intervals)
     cachedSet.add(req.intervals)
+
     state.watermarkRequest match {
-      case Some(WatermarkRequest(_, newWatermark)) ⇒
+      case Some(WatermarkRequest(wmReq, newWatermark)) if wmReq.requestId == req.requestId ⇒
         state.watermark = newWatermark
         state.lastInterval.foreach(_.adjLeft(state.watermark))
         state.watermarkRequest = None
@@ -272,6 +273,7 @@ class CacheScale(scale: Int, cacheState: CacheState, meta: Meta, aggregation: Ag
       //debug(s"agg=$aggregation, scale=$scale, (1): receive(${req.intervals}), state.lastInterval=${state.lastInterval}")
       case _ ⇒
     }
+
     for (interval ← cachedSet.shrink(state.maxCached)) {
       var key = interval.left
       while (key < interval.right) {

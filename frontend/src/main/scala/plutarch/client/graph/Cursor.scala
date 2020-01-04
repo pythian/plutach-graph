@@ -57,7 +57,7 @@ class Cursor(c: Canv)(implicit ctx: Ctx.Owner) {
     draw()
   }
 
-  private def draw(): Unit = state.pos match {
+  def draw(): Unit = state.pos match {
     case Some(p) ⇒
       c.brush.fillStyle = if (state.onHold) "red" else "green"
       c.brush.fillRect(p.x - 1, 0, 2, c.size.y)

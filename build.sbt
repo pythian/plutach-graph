@@ -68,9 +68,12 @@ lazy val backend =
         "com.typesafe.akka" %% "akka-testkit" % akkaV,
         "org.scalactic" %% "scalactic" % "3.0.3",
         "org.scalatest" %% "scalatest" % "3.0.3" % "test",
-        "commons-io" % "commons-io" % "2.6" % "test"
+        "commons-io" % "commons-io" % "2.6" % "test",
 
         // misc
+        "com.google.cloud" % "google-cloud-pubsub" % "1.102.0",
+        "com.google.api" % "gax-grpc" % "1.52.0"
+
         //"org.twitter4j" % "twitter4j-stream" % "4.0.7",
         //"org.json4s" %% "json4s-jackson" % "3.6.5",
       ),
@@ -99,7 +102,9 @@ lazy val backend =
       },
       // to make it work with spark
       assemblyShadeRules in assembly := Seq(
-        ShadeRule.rename("com.fasterxml.**" -> "shaded.fasterxml.@1").inAll
+        ShadeRule.rename("com.fasterxml.**" -> "shaded.fasterxml.@1").inAll,
+        ShadeRule.rename("com.google.common.**" -> "repackaged.com.google.common.@1").inAll,
+        ShadeRule.rename("com.google.protobuf.**" -> "repackaged.com.google.protobuf.@1").inAll
       ),
       fork in run := true,
       fork in Test := true

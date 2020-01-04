@@ -18,9 +18,10 @@ package plutarch.server.data.scale
 
 import java.nio.ByteBuffer
 import java.util
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.shared.collection.{ ByteRangeMap, Destroyer }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
 object MultiByteBufferAggregationStore {
@@ -36,7 +37,7 @@ object MultiByteBufferAggregationStore {
     private val byteBuffer = ByteBuffer.allocateDirect(storeBaseSize / (step / 1000L).toInt)
 
     def add(key: Long, value: ByteBuffer): Boolean = {
-      if (!offsets.hasRemaining || byteBuffer.remaining() < value.remaining()) {
+      if (offsets.remaining < 4 || byteBuffer.remaining() < value.remaining()) {
         return false
       }
       val newCurrentOffset = state.currOffset + value.limit()
@@ -83,12 +84,14 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
   @volatile private var state = State()
 
   @volatile private var page = Page(step, headerBaseSize, storeBaseSize)
-  @volatile private var pages: util.TreeMap[Long, Page] = {
+  private val pages: util.TreeMap[Long, Page] = {
     val map = new util.TreeMap[Long, Page]()
     map.put(Long.MinValue, page)
     map
   }
+  val pagesLock = new ReentrantReadWriteLock()
 
+  // for testing only
   private[scale] def getPages = {
     pages
   }
@@ -97,7 +100,12 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
     if (!page.add(key, value)) {
       page = Page(step, headerBaseSize, storeBaseSize)
       assert(page.add(key, value), "Unable to add value to a new page")
-      pages.put(key, page)
+      try {
+        pagesLock.writeLock().lock()
+        pages.put(key, page)
+      } finally {
+        pagesLock.writeLock().unlock()
+      }
     }
   }
 
@@ -105,6 +113,11 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
     if (isClosed) {
       throw new RuntimeException(s"Trying to call checkState on closed MultiByteBufferAggregationStore")
     }
+    addSync(key, value)
+    Future.successful()
+  }
+
+  private def addSync(key: Long, value: ByteBuffer): Unit = {
     if (state.currKey == Long.MinValue || key == state.currKey + step) {
       addNext(key, value)
     } else if (key > state.currKey + step) {
@@ -118,14 +131,13 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
     }
     val newFirstKey = if (state.firstKey == Long.MaxValue) key else state.firstKey
     state = State(newFirstKey, key)
-    Future.successful()
   }
 
   def get(x: Long, y: Long): Future[ByteBuffer] = {
     Future.successful(getSync(x, y))
   }
 
-  def getSync(x: Long, y: Long): ByteBuffer = {
+  private[scale] def getSync(x: Long, y: Long): ByteBuffer = {
     val thisState = state
     if (x <= thisState.currKey && y >= thisState.firstKey) {
 
@@ -133,21 +145,24 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
       val xRound = ((x / step) * step).max(thisState.firstKey)
       val yRound = ((y / step) * step).min(thisState.currKey + step)
 
-      val left = pages.floorKey(xRound)
-      var right = pages.ceilingKey(yRound + step)
-
-      if (right < yRound + step) {
-        right = Long.MaxValue
+      val intersected = try {
+        pagesLock.readLock().lock()
+        val left = pages.floorKey(xRound)
+        var right = pages.ceilingKey(yRound + step)
+        if (right < yRound + step) {
+          right = Long.MaxValue
+        }
+        pages.subMap(left, right).values().asScala.toList
+      } finally {
+        pagesLock.readLock().unlock()
       }
 
-      val intersected = pages.subMap(left, right)
-
-      if (intersected.size() == 1) {
-        intersected.get(left).get(xRound, yRound)
+      if (intersected.size == 1) {
+        intersected.head.get(xRound, yRound)
       } else {
-        var len = 0;
+        var len = 0
         val list = new util.ArrayList[ByteBuffer]()
-        for (page ← intersected.values().asScala) {
+        for (page ← intersected) {
           val bb = page.get(xRound, yRound)
           list.add(bb)
           len += bb.remaining()
@@ -168,8 +183,13 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
   override def close(): Unit = {
     isClosed = true
     state = null
-    for (page ← pages.values().asScala) {
-      page.close()
+    try {
+      pagesLock.writeLock().lock()
+      for (page ← pages.values().asScala) {
+        page.close()
+      }
+    } finally {
+      pagesLock.writeLock().unlock()
     }
   }
 

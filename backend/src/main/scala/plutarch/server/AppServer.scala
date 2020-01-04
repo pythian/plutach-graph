@@ -60,7 +60,7 @@ object AppServer extends LazyLogging {
       val ashPipeline = new SmallTestPipeline(webSocketFlowCoordinator, metricManager, actorSystem)
     }
 
-    SparkConnector.init(webSocketFlowCoordinator, metricManager, actorSystem)
+    SparkPipeline.init(webSocketFlowCoordinator, metricManager, actorSystem)
 
     val service = new Service(webSocketFlowCoordinator, metricManager)
 

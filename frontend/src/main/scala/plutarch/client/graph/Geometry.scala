@@ -472,8 +472,9 @@ object Geometry {
           state.adjCurrent = (state.current / step).floor * step
           if (state.coordinates == CoordinatesUniverseRealTime && delta != 0) {
             def transform(v: V): V = v + V(delta, 0)
-
             checkDomain(transform(state.gmin), transform(state.gmax))
+          } else if (state.gridCoordinates == CoordinatesUniverseRealTime && delta != 0) {
+            checkDomain(state.gmin, state.gmax)
           }
         } else {
           // ignoring set current to the past!

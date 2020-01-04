@@ -135,6 +135,7 @@ abstract class GraphControl(conf: GraphControlConf)(implicit ctx: Ctx.Owner) ext
 
     grid.draw()
     selecting.draw()
+    controlCursor.draw()
   }
 
   private lazy val onSort: () ⇒ Unit = {
@@ -200,6 +201,7 @@ abstract class GraphControl(conf: GraphControlConf)(implicit ctx: Ctx.Owner) ext
     graphGeometry.transform.setCurrent(current)
     if (graph.isNewCurrentInteresting) drawThrottle.asap()
     selecting.refresh(current)
+    controlCursor.refresh()
   }
 
   def update(req: Protocol.WSHistRequest): Unit = {

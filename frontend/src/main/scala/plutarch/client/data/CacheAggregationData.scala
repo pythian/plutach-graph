@@ -22,6 +22,7 @@ import plutarch.shared.collection.RedBlackTreeInt
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.shared.data.Picklers
 import plutarch.shared.data.metrics.Meta
+import slogging.LazyLogging
 
 object CacheAggregationData {
   def create(
@@ -36,7 +37,7 @@ class CacheAggregationData(
     cacheState:  CacheState,
     meta:        Meta,
     aggregation: Aggregation,
-    dataSource:  DataSource) extends AggregationData {
+    dataSource:  DataSource) extends AggregationData with LazyLogging {
 
   private val cacheScales = RedBlackTreeInt.empty[CacheScale]
   for (scale ← meta.conf.scales) {
@@ -51,19 +52,57 @@ class CacheAggregationData(
       .getOrElse(DataView.empty(targetNode.key * meta.conf.step, x, y, bestScale, cacheScale.info))
   }
 
+  private var prev: (Double, Double) = (Double.MinValue, Double.MaxValue)
+  private var prevIsZoomIn: Boolean = true
+  private var currently: Int = 0
+  private var prevBestScale: Int = 0
+
   def get(targetScale: Int, x: Double, y: Double): DataView = {
+
     val targetNode = RedBlackTreeInt.maxNodeBeforeOrFirst(cacheScales, targetScale)
     val cacheScale = targetNode.value
     val bestScale = targetNode.key
 
+    // predictive zooming caching
+    if (prevBestScale != bestScale) {
+      currently = 0
+    } else if (prev._1 < x && y < prev._2) {
+      //logger.info("isZoomIn=true")
+      currently = if (prevIsZoomIn) currently + 1 else 1
+      if (currently >= 3) {
+        if (targetNode.prev != null) {
+          targetNode.prev.value.request(x, y)
+        }
+      }
+      prevIsZoomIn = true
+    } else if (x < prev._1 && prev._2 < y) {
+      currently = if (!prevIsZoomIn) currently + 1 else 1
+      val k = (prev._2 - prev._1) / (y - x)
+      if (currently >= 3 && k < 3) {
+        if (targetNode.next != null) {
+          val c = (prev._2 - k * y) / (1 - k)
+          val (x2, y2) = (c + k * 1.3 * (x - c), c + k * 1.3 * (y - c))
+          targetNode.next.value.request(x2, y2)
+        }
+      }
+      prevIsZoomIn = false
+    }
+    prev = (x, y)
+    prevBestScale = bestScale
+
     cacheScale.get(x, y, bestScale, isRequested = true) match {
       case Some(view) ⇒ view // 1. get exact
       case None ⇒
-        var node = RedBlackTreeInt.minNodeAfter(cacheScales, targetScale)
+        // try to use current scale when scale up if best of not available, as current is likely cached
+        var node = if (targetNode.prev != null) {
+          targetNode.prev
+        } else {
+          RedBlackTreeInt.minNodeAfter(cacheScales, targetScale)
+        }
         var res = Option.empty[DataView]
         while ((node ne null) && res.isEmpty) {
           if (node.key != targetScale) { // skip key as we already checked it (in case targetScale is exact match to it)
-            res = node.value.get(x, y, bestScale, isRequested = true)
+            res = node.value.get(x, y, bestScale, isRequested = node != targetNode.prev)
           }
           node = node.next
         }

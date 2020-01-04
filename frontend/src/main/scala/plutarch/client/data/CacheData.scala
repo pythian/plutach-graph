@@ -20,8 +20,8 @@ import plutarch.shared.data.Picklers
 import plutarch.shared.data.metrics.{ Conf, Meta }
 
 object CacheData {
-  val checkDist = 150
-  val loadDist = 300
+  val checkDist = 500
+  val loadDist = 1000
   def create(dataSource: DataSource): CacheData = new CacheData(dataSource)
 }
 

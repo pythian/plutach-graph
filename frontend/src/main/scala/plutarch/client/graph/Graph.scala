@@ -115,14 +115,25 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
   }
 
   def isNewCurrentInteresting: Boolean = {
-    val currentOnScreen = ctx.getState.gmin.x - ctx.getState.step <= ctx.getState.current && ctx.getState.current <= ctx.getState.gmax.x + ctx.getState.step
+    val currentOnScreen = ctx.getState.gmin.x - ctx.getState.step <= ctx.getState.current &&
+      ctx.getState.current <= ctx.getState.gmax.x + ctx.getState.step
     val adjCurrentChanged = state.drawAdjCurrent != ctx.getState.adjCurrent
     val dataIncarnationChanged = state.drawDataIncarnation != graphControlState.metricData.map(_.incarnation).getOrElse(-1L)
     val isRealTime = ctx.getState.coordinates == Geometry.CoordinatesUniverseRealTime || ctx.getState.gridCoordinates == Geometry.CoordinatesUniverseRealTime
-    val res = (currentOnScreen && (adjCurrentChanged || dataIncarnationChanged)) || (adjCurrentChanged && isRealTime)
+    // we can have current in "the past"
+    val res = currentOnScreen /*(currentOnScreen && (adjCurrentChanged || dataIncarnationChanged)) */ || (adjCurrentChanged && isRealTime)
     //println(s"state.drawAdjCurrent=${state.drawAdjCurrent}, ctx.getState.adjCurrent=${ctx.getState.adjCurrent}")
     //println(s"isNewCurrentInteresting=$res, currentOnScreen=$currentOnScreen, adjCurrentChanged=$adjCurrentChanged, dataIncarnationChanged=$dataIncarnationChanged, isRealTime=$isRealTime")
+    //    println(s"isNewCurrentInteresting=$res, " +
+    //      s"currentOnScreen=$currentOnScreen, " +
+    //      s"ctx.getState.current=${ctx.getState.current}, " +
+    //      s"ctx.getState.gmin.x=${ctx.getState.gmin.x}, " +
+    //      s"ctx.getState.gmax.x=${ctx.getState.gmax.x}, " +
+    //      s"ctx.getState.step=${ctx.getState.step}")
     res
+    // problem: current now is just fake current time, so  when we receive old data  if doesn't affect current.
+    // this is temporary and dirty solution to the issue
+    true
   }
 
   /**
