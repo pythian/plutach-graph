@@ -7,11 +7,10 @@ import plutarch.server.data.metricManager.MetricManager
 import plutarch.server.data.metrics.Metric
 import plutarch.server.data.store.MetricStoreCreator
 import plutarch.shared.data.metrics.{ Conf ⇒ MetricConf }
-
 import scala.concurrent.{ Await, Future }
 
 class SparkPipelineImpl(
-    val pipelineConfig: Conf,
+    val pipelineConfig: SparkPipeline.Config,
     val metricConfig:   MetricConf,
     val storeConf:      MetricStoreCreator.Conf)(
     implicit

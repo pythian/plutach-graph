@@ -16,6 +16,8 @@
 
 package plutarch.server.data.raw
 
+import plutarch.server.data.report.{ RawStoreDummyReport, RawStoreImplReport, RawStoreReport }
+
 import scala.concurrent.Future
 
 // todo: fast raw to scales converter
@@ -26,6 +28,7 @@ trait Raw {
   def iterator: Iterator[(Long, Seq[(String, Double)])]
   def fzeeze(): Unit
   def close(): Unit
+  def report: RawStoreReport
 }
 
 object Raw {
@@ -41,6 +44,9 @@ object Raw {
     def iterator: Iterator[(Long, Seq[(String, Double)])] = Iterator.empty
     def fzeeze(): Unit = {}
     def close(): Unit = {}
+    def report: RawStoreDummyReport = {
+      RawStoreDummyReport()
+    }
   }
 
   class Impl(name: String) extends Raw {
@@ -71,6 +77,9 @@ object Raw {
     def close(): Unit = {
       store = null
       isClosed = true
+    }
+    def report: RawStoreImplReport = {
+      RawStoreImplReport(store.size)
     }
   }
 }

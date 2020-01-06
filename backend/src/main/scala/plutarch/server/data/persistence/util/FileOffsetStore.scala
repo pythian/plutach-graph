@@ -156,4 +156,5 @@ class FileOffsetStore(channel: FileChannel, val path: Path) extends RangeMap wit
     channel.close()
   }
 
+  def capacity: Int = bodySize
 }

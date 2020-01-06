@@ -18,12 +18,15 @@ package plutarch.server.data.objects
 
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
+
 import scala.collection.mutable.{ Set ⇒ MSet }
 import boopickle.Default.Pickle
 import boopickle.Default._
+import plutarch.server.data.report.{ MemoryObjectsStoreReport, ObjectsStoreReport }
 import plutarch.shared.collection.ImmutableIntervalSet
 import plutarch.shared.colors.Colors
 import plutarch.shared.data.DataObject
+
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ ExecutionContext, Future }
@@ -156,6 +159,10 @@ abstract class MemoryObjectStore(initId: Int, initState: MemoryObjectStore.State
     colors.clear()
     curId.set(Int.MinValue)
     state = null
+  }
+
+  def report: MemoryObjectsStoreReport = {
+    MemoryObjectsStoreReport(colors.size, state.nameToId.size, state.times.size)
   }
 
 }

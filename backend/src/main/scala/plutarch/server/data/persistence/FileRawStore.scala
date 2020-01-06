@@ -26,6 +26,7 @@ import boopickle.Default._
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.server.data.persistence.util.AppendableFileStore
 import plutarch.server.data.raw.Raw
+import plutarch.server.data.report.RawStoreFileReport
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.{ Failure, Success }
@@ -123,5 +124,9 @@ class FileRawStore(
   }
   override def close(): Unit = {
     afs.close()
+  }
+
+  override def report: RawStoreFileReport = {
+    RawStoreFileReport()
   }
 }

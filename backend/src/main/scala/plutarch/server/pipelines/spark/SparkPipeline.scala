@@ -3,8 +3,15 @@ package plutarch.server.pipelines.spark
 import org.apache.spark.sql.{ DataFrame, Dataset }
 import plutarch.server.data.metrics.Metric
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 object SparkPipeline {
+
+  val BATCH_SIZE = 100
+  val TIMEOUT = 10 seconds
+
+  case class Config(batchSize: Int = BATCH_SIZE, timeout: Duration = TIMEOUT)
+
   sealed trait TSGeneric {
     def t: Long
   }
@@ -17,7 +24,7 @@ object SparkPipeline {
 }
 
 trait SparkPipeline {
-  def pipelineConfig: Conf
+  def pipelineConfig: SparkPipeline.Config
   def metric: Metric
   def publish(t: Long, data: Seq[(String, Double)]): Future[Unit]
   def loadDataSet[T <: SparkPipeline.TSGeneric](ds: Dataset[T]): Unit

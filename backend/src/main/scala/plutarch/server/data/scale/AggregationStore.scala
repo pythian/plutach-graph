@@ -17,9 +17,9 @@
 package plutarch.server.data.scale
 
 import java.nio.ByteBuffer
-
 import scala.concurrent.{ ExecutionContext, Future }
 import com.typesafe.scalalogging.LazyLogging
+import plutarch.server.data.report.AggregationStoreReport
 import plutarch.server.data.store.AggregationStoreCreator
 import plutarch.shared.data.Aggregations.Aggregation
 
@@ -27,6 +27,7 @@ trait AggregationStore {
   def add(key: Long, value: ByteBuffer): Future[Unit]
   def get(x: Long, y: Long): Future[ByteBuffer]
   def close(): Unit
+  def report: AggregationStoreReport
 }
 
 object AggregationStore extends LazyLogging {

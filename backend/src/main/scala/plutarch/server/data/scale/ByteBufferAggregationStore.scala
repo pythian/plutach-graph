@@ -17,8 +17,8 @@
 package plutarch.server.data.scale
 
 import java.nio.ByteBuffer
-
 import com.typesafe.scalalogging.LazyLogging
+import plutarch.server.data.report.ByteBufferAggregationStoreReport
 import plutarch.shared.collection.{ ByteRangeMap, Destroyer }
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -87,5 +87,9 @@ class ByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBaseSize:
     state = null
     offsets.close()
     Destroyer.destroy(byteBuffer)
+  }
+
+  def report: ByteBufferAggregationStoreReport = {
+    ByteBufferAggregationStoreReport()
   }
 }

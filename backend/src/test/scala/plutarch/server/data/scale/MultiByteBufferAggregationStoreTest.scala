@@ -22,7 +22,7 @@ import org.scalatest.{ FunSuite, Matchers }
 
 class MultiByteBufferAggregationStoreTest extends FunSuite with Matchers {
 
-  def padding(len: Int, c: Char) = {
+  def padding(len: Int, c: Char): ByteBuffer = {
     val bb = ByteBuffer.allocate(len)
     for (i ← 0 until len) {
       bb.put(c.asInstanceOf[Byte])
@@ -32,12 +32,12 @@ class MultiByteBufferAggregationStoreTest extends FunSuite with Matchers {
   }
 
   test("query empty sould empty") {
-    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000)
+    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000, 0, 0)
     s.get(1000, 2000).value.get.get.remaining() shouldBe 0
   }
 
   test("put in empty 1") {
-    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000)
+    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000, 0, 0)
     //val s = ByteBufferAggregationStore.create(1000, 100, 1000)
     s.add(1000, padding(900, '1'))
     val bb = s.get(1000, 2000).value.get.get
@@ -46,7 +46,7 @@ class MultiByteBufferAggregationStoreTest extends FunSuite with Matchers {
   }
 
   test("put empty 2") {
-    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000)
+    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000, 0, 0)
     //val s = ByteBufferAggregationStore.create(1000, 100, 1000)
     s.add(1000, padding(1000, '1'))
     val bb = s.get(1000, 2000).value.get.get
@@ -55,14 +55,14 @@ class MultiByteBufferAggregationStoreTest extends FunSuite with Matchers {
   }
 
   test("put empty 3") {
-    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000)
+    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000, 0, 0)
     assertThrows[AssertionError] {
       s.add(1000, padding(1001, '1'))
     }
   }
 
   test("put 1") {
-    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000)
+    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000, 0, 0)
     s.add(1000, padding(300, '1'))
     s.add(2000, padding(300, '2'))
     s.add(3000, padding(300, '3'))
@@ -85,7 +85,7 @@ class MultiByteBufferAggregationStoreTest extends FunSuite with Matchers {
   }
 
   test("put 2") {
-    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000)
+    val s = MultiByteBufferAggregationStore.create(1000, 100, 1000, 0, 0)
     s.add(1000, padding(300, '1'))
     s.add(2000, padding(300, '2'))
     s.add(3000, padding(300, '3'))

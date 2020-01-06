@@ -20,21 +20,24 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import com.typesafe.scalalogging.LazyLogging
+import plutarch.server.data.report.{ MultiByteBufferAggregationStoreReport, PageReport }
 import plutarch.shared.collection.{ ByteRangeMap, Destroyer }
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
 object MultiByteBufferAggregationStore {
   val emptyByteBuffer: ByteBuffer = ByteBuffer.wrap(Array[Byte]())
-  def create(step: Long, headerBaseSize: Int, storeBaseSize: Int): MultiByteBufferAggregationStore =
-    new MultiByteBufferAggregationStore(step, headerBaseSize, storeBaseSize)
+  def create(step: Long, headerBaseSize: Int, storeBaseSize: Int, minOffsetsSize: Int = 1024 * 1024, minByteBufferSize: Int = 8 * 1024 * 1024): MultiByteBufferAggregationStore =
+    new MultiByteBufferAggregationStore(step, headerBaseSize, storeBaseSize, minOffsetsSize, minByteBufferSize)
 
   private case class State(firstKey: Long = Long.MaxValue, currKey: Long = Long.MinValue, currOffset: Int = 0)
 
-  case class Page(step: Long, headerBaseSize: Int, storeBaseSize: Int) {
+  case class Page(step: Long, headerBaseSize: Int, storeBaseSize: Int, minOffsetsSize: Int, minByteBufferSize: Int) {
     @volatile private var state = State()
-    private val offsets = new ByteRangeMap(step, headerBaseSize / (step / 1000L).toInt)
-    private val byteBuffer = ByteBuffer.allocateDirect(storeBaseSize / (step / 1000L).toInt)
+    private val offsetsSize = minOffsetsSize.max(headerBaseSize / (step / 1000L).toInt)
+    private val byteBufferSize = minByteBufferSize.max(storeBaseSize / (step / 1000L).toInt)
+    private val offsets = new ByteRangeMap(step, offsetsSize)
+    private val byteBuffer = ByteBuffer.allocateDirect(byteBufferSize)
 
     def add(key: Long, value: ByteBuffer): Boolean = {
       if (offsets.remaining < 4 || byteBuffer.remaining() < value.remaining()) {
@@ -73,17 +76,21 @@ object MultiByteBufferAggregationStore {
       Destroyer.destroy(byteBuffer)
     }
 
+    def report: PageReport = {
+      PageReport(offsets.capacity, byteBuffer.capacity())
+    }
+
   }
 }
 
-class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBaseSize: Int) extends AggregationStore with LazyLogging {
+class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBaseSize: Int, minOffsetsSize: Int, minByteBufferSize: Int) extends AggregationStore with LazyLogging {
   import MultiByteBufferAggregationStore._
 
   private var isClosed = false
 
   @volatile private var state = State()
 
-  @volatile private var page = Page(step, headerBaseSize, storeBaseSize)
+  @volatile private var page = Page(step, headerBaseSize, storeBaseSize, minOffsetsSize, minByteBufferSize)
   private val pages: util.TreeMap[Long, Page] = {
     val map = new util.TreeMap[Long, Page]()
     map.put(Long.MinValue, page)
@@ -98,7 +105,7 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
 
   private def addNext(key: Long, value: ByteBuffer): Unit = {
     if (!page.add(key, value)) {
-      page = Page(step, headerBaseSize, storeBaseSize)
+      page = Page(step, headerBaseSize, storeBaseSize, minOffsetsSize, minByteBufferSize)
       assert(page.add(key, value), "Unable to add value to a new page")
       try {
         pagesLock.writeLock().lock()
@@ -191,6 +198,10 @@ class MultiByteBufferAggregationStore(step: Long, headerBaseSize: Int, storeBase
     } finally {
       pagesLock.writeLock().unlock()
     }
+  }
+
+  def report: MultiByteBufferAggregationStoreReport = {
+    MultiByteBufferAggregationStoreReport(pages.asScala.toList.map(p ⇒ p._1 -> p._2.report).toMap)
   }
 
 }

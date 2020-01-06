@@ -28,10 +28,11 @@ trait RangeMap {
   def from: Long
   def until: Long
   def close(): Unit
+  def capacity: Int
 }
 
 // storing keys as buffer of ints
-class ByteRangeMap(val step: Long, capacity: Int) extends RangeMap {
+class ByteRangeMap(val step: Long, val capacity: Int) extends RangeMap {
   private var first = Long.MinValue
   private var current = Long.MinValue
   private var offsets = ByteBuffer.allocateDirect(capacity)

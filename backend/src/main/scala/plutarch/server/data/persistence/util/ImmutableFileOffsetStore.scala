@@ -141,4 +141,6 @@ class ImmutableFileOffsetStore(channel: FileChannel, val path: Path) extends Ran
     body.asInstanceOf[DirectBuffer].cleaner.clean()
     channel.close()
   }
+
+  def capacity: Int = bodySize
 }

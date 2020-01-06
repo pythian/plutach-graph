@@ -24,6 +24,7 @@ trait ImmutableIntervalSet {
   def update(left: Long, right: Long, id: Int, newLeft: Long, newRight: Long): ImmutableIntervalSet
   def search(left: Long, right: Long): Seq[(Long, Long, Int)]
   def searchIds(left: Long, right: Long): Seq[Int]
+  def size: Int
 }
 
 object ImmutableIntervalSet {
@@ -89,6 +90,9 @@ object ImmutableIntervalSet {
     }
 
     override def toString: String = if (atree != null) atree.toString else "empty"
+
+    def size: Int = atree.count
+
   }
 
 }

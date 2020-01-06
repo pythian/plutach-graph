@@ -17,7 +17,10 @@
 package plutarch.server.data.objects
 
 import java.nio.ByteBuffer
+
+import plutarch.server.data.report.ObjectsStoreReport
 import plutarch.shared.data.DataObject
+
 import scala.concurrent.{ ExecutionContext, Future }
 
 // todo: combine with permanent store!
@@ -30,6 +33,7 @@ trait Objects {
   def getDe(left: Long, right: Long): Seq[DataObject]
   def getDe(intervals: Seq[(Long, Long)]): Seq[DataObject]
   def close(): Unit
+  def report: ObjectsStoreReport
 }
 
 object Objects {

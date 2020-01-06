@@ -130,9 +130,10 @@ class Graph(graphControlState: GraphControlState, id: Int)(implicit ctx: Geometr
     //      s"ctx.getState.gmin.x=${ctx.getState.gmin.x}, " +
     //      s"ctx.getState.gmax.x=${ctx.getState.gmax.x}, " +
     //      s"ctx.getState.step=${ctx.getState.step}")
-    res
+    //res
     // problem: current now is just fake current time, so  when we receive old data  if doesn't affect current.
     // this is temporary and dirty solution to the issue
+    // todo: ???
     true
   }
 

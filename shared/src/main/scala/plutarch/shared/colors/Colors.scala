@@ -24,6 +24,7 @@ import scala.collection.mutable.{ Queue ⇒ MQueue }
 trait Colors {
   def next(): String
   def clear(): Unit
+  def size: Int
 }
 
 object Colors {
@@ -293,6 +294,8 @@ object Colors {
     override def clear(): Unit = {
       last.clear()
     }
+
+    override def size: Int = last.size
 
   }
 

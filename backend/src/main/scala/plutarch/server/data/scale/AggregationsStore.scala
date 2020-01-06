@@ -17,9 +17,9 @@
 package plutarch.server.data.scale
 
 import java.nio.ByteBuffer
-
 import scala.concurrent.{ ExecutionContext, Future }
 import com.typesafe.scalalogging.LazyLogging
+import plutarch.server.data.report.AggregationsStoreReport
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.server.data.scale.Scale.CurrentR
 import plutarch.server.data.store.AggregationStoreCreator
@@ -28,6 +28,7 @@ trait AggregationsStore {
   def add(curr: CurrentR)(implicit executor: ExecutionContext): Future[Unit]
   def get(aggregation: Aggregation, x: Long, y: Long)(implicit executor: ExecutionContext): Future[ByteBuffer]
   def close(): Unit
+  def report: AggregationsStoreReport
 }
 
 object AggregationsStore extends LazyLogging {
@@ -37,7 +38,7 @@ object AggregationsStore extends LazyLogging {
   private case class AggregationsStoreState(first: Long, last: Long)
 
   class Impl(step: Long, aggregations: Seq[Aggregation], storeCreator: AggregationStoreCreator) extends AggregationsStore {
-    private val aggregationStores = aggregations.map(agg ⇒ agg -> AggregationStore.create(step, agg, storeCreator)).toMap
+    val aggregationStores: Map[Aggregation, AggregationStore] = aggregations.map(agg ⇒ agg -> AggregationStore.create(step, agg, storeCreator)).toMap
     def add(curr: CurrentR)(implicit executor: ExecutionContext): Future[Unit] = {
       val key = curr.key
       val futures = for {
@@ -53,6 +54,9 @@ object AggregationsStore extends LazyLogging {
     }
     override def close(): Unit = {
       aggregationStores.foreach(_._2.close())
+    }
+    def report: AggregationsStoreReport = {
+      AggregationsStoreReport(aggregationStores.mapValues(_.report))
     }
   }
 }

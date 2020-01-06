@@ -23,6 +23,7 @@ import boopickle.Default.Pickle
 import plutarch.server.data.accumulators.{ CombinedAccumulator, CombinedAccumulatorCreator }
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import com.typesafe.scalalogging.LazyLogging
+import plutarch.server.data.report.ScaleReport
 import plutarch.server.data.store.AggregationStoreCreator
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.shared.data.Picklers
@@ -35,6 +36,7 @@ trait Scale {
   def keyRoundToStep(t: Long): Long
   def freeze()(implicit executor: ExecutionContext): Unit
   def close(): Unit
+  def report: ScaleReport
 }
 
 // TODO better error
@@ -147,6 +149,10 @@ object Scale extends LazyLogging {
       isClose = true
       curr = null
       aggregationsStore.close()
+    }
+
+    def report: ScaleReport = {
+      ScaleReport(aggregationsStore.report)
     }
 
   }

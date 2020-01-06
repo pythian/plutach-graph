@@ -21,7 +21,9 @@ import java.nio.file.{ Files, Path, Paths }
 
 import com.typesafe.scalalogging.LazyLogging
 import plutarch.server.data.persistence.util.{ AppendableFileStore, FileOffsetStore }
+import plutarch.server.data.report.FileAggregationStoreReport
 import plutarch.server.data.scale.AggregationStore
+
 import scala.concurrent.{ ExecutionContext, Future }
 
 object FileAggregationStore extends LazyLogging {
@@ -104,6 +106,10 @@ class FileAggregationStore(val fos: FileOffsetStore, val afs: AppendableFileStor
   def close(): Unit = {
     afs.close()
     fos.close()
+  }
+
+  def report: FileAggregationStoreReport = {
+    FileAggregationStoreReport()
   }
 
 }

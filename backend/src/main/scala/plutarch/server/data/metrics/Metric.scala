@@ -17,18 +17,17 @@
 package plutarch.server.data.metrics
 
 import java.nio.{ ByteBuffer, ByteOrder }
-
 import boopickle.Default.Pickle
 import plutarch.server.data.accumulators.CombinedAccumulator
 import plutarch.shared.data.Aggregations.Aggregation
 import plutarch.server.data.objects.Objects
 import plutarch.shared.data.DataObject
 import plutarch.server.data.raw.Raw
+import plutarch.server.data.report.MetricReport
 import plutarch.server.data.scale.Scale
 import plutarch.server.data.store.MetricStoreCreator
 import plutarch.shared.data.metrics.{ Conf, Meta }
 import plutarch.shared.data.Picklers.ReqMeta
-
 import scala.concurrent.{ ExecutionContext, Future }
 
 trait Metric {
@@ -45,6 +44,7 @@ trait Metric {
   def push(t: Long, values: Seq[(String, Double)]): Unit
   def pop(): Seq[(Long, Seq[(String, Double)])]
   def close(): Unit
+  def report: MetricReport
 }
 
 // todo: possible bug: have to request objects wider than data to cover with step ?
@@ -160,6 +160,10 @@ object Metric {
       objectsStore.close()
       scalesStoreList.foreach(_.close())
       rawStore.close()
+    }
+
+    def report: MetricReport = {
+      MetricReport(rawStore.report, scalesStore.mapValues(_.report), objectsStore.report)
     }
 
   }

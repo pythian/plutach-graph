@@ -17,13 +17,13 @@ import PubSubConnectionImpl._
 
 object PubSubConnectionImpl {
 
-  case class Config(publishTimeout: Int)
-
-  class Receiver(metricName: String, config: Config)(implicit executionContext: ExecutionContext, metricManager: MetricManager, webSocketFlowCoordinator: WebSocketFlowCoordinator)
+  class Receiver(metricName: String)(implicit executionContext: ExecutionContext, metricManager: MetricManager, webSocketFlowCoordinator: WebSocketFlowCoordinator)
     extends DebugBuffer {
 
     val metric: Metric = metricManager.getMetric(metricName).getOrElse(
       throw new RuntimeException(s"Unknown metric $metricName"))
+
+    val timeout: Long = metric.conf.step / 2
 
     var lastKey: Long = metric.getCurrentKey
     val buffer = new java.util.TreeMap[Long, Seq[(String, Double)]]
@@ -46,7 +46,7 @@ object PubSubConnectionImpl {
         lastPublished = System.currentTimeMillis()
       } else if (t > lastKey + metric.conf.step) {
         buffer.put(t, data)
-        if (lastPublished < System.currentTimeMillis() - config.publishTimeout) {
+        if (lastPublished < System.currentTimeMillis() - timeout) {
           flushBuffer(continuously = false, failfast = true)
         }
       } else {
@@ -96,13 +96,13 @@ object PubSubConnectionImpl {
 
 }
 
-class PubSubConnectionImpl(config: Config, subscriptionName: ProjectSubscriptionName, metrics: Seq[String], parseFn: ParseFn)(implicit system: ActorSystem, metricManager: MetricManager, webSocketFlowCoordinator: WebSocketFlowCoordinator)
+class PubSubConnectionImpl(subscriptionName: ProjectSubscriptionName, metrics: Seq[String], parseFn: ParseFn)(implicit system: ActorSystem, metricManager: MetricManager, webSocketFlowCoordinator: WebSocketFlowCoordinator)
   extends PubSubConnection with DebugBuffer {
   conn ⇒
 
   import system.dispatcher
 
-  val receivers: Map[String, Receiver] = metrics.map(name ⇒ name -> new Receiver(name, config)).toMap
+  val receivers: Map[String, Receiver] = metrics.map(name ⇒ name -> new Receiver(name)).toMap
 
   val messageReceiver: MessageReceiver = new MessageReceiver {
 

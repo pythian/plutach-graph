@@ -30,8 +30,6 @@ import plutarch.server.pipelines.spark.{ PubSubConnection, PubSubConnectionImpl,
 
 object SparkPipeline {
 
-  val BUFFER_MAX_KEEP_TIME = 30000
-
   var system: ActorSystem = _
   var metricManager: MetricManager = _
   var webSocketFlowCoordinator: WebSocketFlowCoordinator = _
@@ -46,32 +44,33 @@ object SparkPipeline {
     this.webSocketFlowCoordinator = webSocketFlowCoordinator
   }
 
-  def getConf(name: String): Conf = Conf(
-    name = name,
-    //step = 60000,
-    step = 10000,
-    //step = 1000,
-    //scales = Seq(60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24).map(_ / 60),
-    scales = Seq(10, 30, 60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24).map(_ / 10),
-    //scales = Seq(1, 5, 10, 30, 60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24),
-    aggregations = Seq(Max, Min, Sum),
-    withTotal = false)
-
-  def create(name: String): SparkPipeline = {
-    create(name, MetricStoreCreator.newConf(name))
+  def getConf(name: String, step: Int): Conf = {
+    val allScales = Seq(1, 5, 10, 30, 60, 300, 600, 1800, 3600, 3600 * 6, 3600 * 12, 3600 * 24)
+    val firstScale = step / 1000
+    val scales = allScales.dropWhile(_ < firstScale).map(_ / firstScale)
+    Conf(
+      name = name,
+      step = step,
+      scales = scales,
+      aggregations = Seq(Max, Min, Sum),
+      withTotal = false)
   }
 
-  def create(name: String, headerBaseSize: Int, storeBaseSize: Int): SparkPipeline = {
+  def create(name: String, step: Int): SparkPipeline = {
+    create(name, MetricStoreCreator.newConf(name), step)
+  }
+
+  def create(name: String, headerBaseSize: Int, storeBaseSize: Int, step: Int): SparkPipeline = {
     val storeConf = new store.MetricStoreCreator.Conf(name, Map(
       DefaultMetricStoreCreatorCreator.HEADER_BASE_SIZE -> headerBaseSize,
       DefaultMetricStoreCreatorCreator.STORE_BASE_SIZE -> storeBaseSize))
-    create(name, storeConf)
+    create(name, storeConf, step)
   }
 
-  def create(name: String, storeConf: MetricStoreCreator.Conf): SparkPipeline =
+  def create(name: String, storeConf: MetricStoreCreator.Conf, step: Int): SparkPipeline =
     new SparkPipelineImpl(
-      spark.Config.default,
-      getConf(name),
+      spark.SparkPipeline.Config(),
+      getConf(name, step),
       storeConf)(system, metricManager)
 
   def dropMetric(name: String): Unit = {
@@ -87,11 +86,7 @@ object SparkPipeline {
     if (subscribers.contains(subscriptionName.toString)) {
       throw new RuntimeException("Subscription is already subscribed")
     }
-    val connection = new PubSubConnectionImpl(
-      PubSubConnectionImpl.Config(BUFFER_MAX_KEEP_TIME),
-      subscriptionName,
-      metrics,
-      parseFn)(system, metricManager, webSocketFlowCoordinator)
+    val connection = new PubSubConnectionImpl(subscriptionName, metrics, parseFn)(system, metricManager, webSocketFlowCoordinator)
     subscribers.put(subscriptionName.toString, connection.subscriber)
     connection
   }

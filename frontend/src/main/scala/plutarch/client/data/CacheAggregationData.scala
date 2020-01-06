@@ -64,6 +64,7 @@ class CacheAggregationData(
     val bestScale = targetNode.key
 
     // predictive zooming caching
+    // todo: tune for touch devices to add thresholds
     if (prevBestScale != bestScale) {
       currently = 0
     } else if (prev._1 < x && y < prev._2) {
